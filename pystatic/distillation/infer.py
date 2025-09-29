@@ -139,4 +139,4 @@ def infer(
                 all_texts = []
 
     if len(all_texts) > 0:
-        _write_data(path, all_pooled, all_mean, all_texts, shards_saved, seen - len(all_texts))
+        _write_data(path, all_pooled, all_mean, all_texts, shards_saved, (seen * batch_size) - len(all_texts))
