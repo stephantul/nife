@@ -39,8 +39,8 @@ def _write_data(
     index: int,
 ) -> None:
     """Write out the data to disk."""
-    pooled_tensor = torch.cat(all_pooled, dim=0)
-    mean_tensor = torch.stack(all_mean, dim=0)
+    pooled_tensor = torch.cat(all_pooled, dim=0).half()
+    mean_tensor = torch.stack(all_mean, dim=0).half()
     torch.save(pooled_tensor, path / f"pooled_{shard:04d}.pt")
     torch.save(mean_tensor, path / f"mean_{shard:04d}.pt")
     with open(path / f"texts_{shard:04d}.txt", "w", encoding="utf-8") as f:
