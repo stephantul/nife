@@ -1,11 +1,15 @@
 [project]
-name = "PACKAGE"
-description = "DESCRIPTION"
+name = "pystatic"
+description = "Static models in python"
 readme = "README.md"
 dynamic = ["version"]
 requires-python = ">=3.11"
 
 dependencies = [
+    "transformers[torch]",
+    "sentence-transformers",
+    "numpy",
+    "datasets",
 ]
 
 [build-system]
@@ -67,10 +71,10 @@ warn_unused_configs = true
 ignore_missing_imports = true
 
 [tool.setuptools]
-packages = ["PACKAGE"]
+packages = ["pystatic"]
 
 [tool.setuptools_scm]
 # can be empty if no extra settings are needed, presence enables setuptools_scm
 
 [tool.setuptools.dynamic]
-version = {attr = "PACKAGE.version.__version__"}
+version = {attr = "pystatic.version.__version__"}
