@@ -167,3 +167,4 @@ local/*
 models/*
 results/*
 data/*
+wandb/*
