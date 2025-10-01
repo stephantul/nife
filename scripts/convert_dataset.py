@@ -136,11 +136,17 @@ def _parse_args() -> argparse.Namespace:
         help="Type of embeddings to use (pooled or mean).",
     )
     parser.add_argument("--truncate-dim", type=int, default=None, help="Truncate embeddings to this dimension.")
+    parser.add_argument("--rows-per-shard", type=int, default=200_000, help="Number of rows per output shard.")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = _parse_args()
     build_parquet_shards_from_folder(
-        args.input, args.output, limit=args.limit, embedding_type=args.embedding_type, truncate_dim=args.truncate_dim
+        args.input,
+        args.output,
+        limit=args.limit,
+        embedding_type=args.embedding_type,
+        truncate_dim=args.truncate_dim,
+        rows_per_shard=args.rows_per_shard,
     )
