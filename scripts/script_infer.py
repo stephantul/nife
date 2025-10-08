@@ -38,4 +38,4 @@ if __name__ == "__main__":
             Iterator[dict[str, str]],
             load_dataset("HuggingFaceFW/fineweb", "sample-10BT", streaming=True, split="train", data_files=path),
         )
-        infer(model, iter(data), batch_size=128, name=f"output/{path.replace('/', '_')}", save_every=768)
+        infer(model, iter(data), batch_size=512, name=f"output/{path.replace('/', '_')}", save_every=256)
