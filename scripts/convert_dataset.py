@@ -21,7 +21,7 @@ def _pair_stream(
     txt_path: Path,
     emb_path: Path,
     truncate_dim: int | None,
-) -> Iterator[tuple[str, np.ndarray]]:
+) -> Iterator[tuple[str, str, np.ndarray]]:
     """Stream aligned (text, embedding_row) pairs from a txt jsonl + tensor file."""
     embs = torch.load(emb_path)
     if truncate_dim is not None:
@@ -31,7 +31,7 @@ def _pair_stream(
     with open(txt_path, "r", encoding="utf-8") as f:
         for i, line in enumerate(f):
             item = json.loads(line)
-            yield item["text"], embs[i]
+            yield item["id"], item["text"], embs[i]
 
 
 def _iter_all_pairs(
@@ -39,7 +39,7 @@ def _iter_all_pairs(
     embedding_type: EmbeddingType,
     truncate_dim: int | None,
     limit: int | None,
-) -> Iterator[tuple[str, np.ndarray]]:
+) -> Iterator[tuple[str, str, np.ndarray]]:
     """Iterate all (text, embedding) pairs across the folder in a streaming fashion."""
     if embedding_type == EmbeddingType.POOLED:
         mask = "pooled_{}.pt"
@@ -55,8 +55,8 @@ def _iter_all_pairs(
         if not emb_path.exists():
             raise ValueError(f"Embedding file {emb_path} does not exist")
 
-        for text, emb in _pair_stream(txt_path, emb_path, truncate_dim):
-            yield text, emb
+        for identifier, text, emb in _pair_stream(txt_path, emb_path, truncate_dim):
+            yield identifier, text, emb
             total += 1
             if limit is not None and total >= limit:
                 return
@@ -79,7 +79,7 @@ def build_parquet_shards_from_folder(
 
     pair_iter = _iter_all_pairs(path, embedding_type, truncate_dim, limit)
     try:
-        first_text, first_emb = next(pair_iter)
+        first_id, first_text, first_emb = next(pair_iter)
     except StopIteration:
         raise RuntimeError("No data found under the given path.")
 
@@ -92,31 +92,35 @@ def build_parquet_shards_from_folder(
     )
 
     # Start first buffer with the peeked row
-    buf_sentences = [first_text]
-    buf_labels = [first_emb.astype("float32")]
+    buf_ids = [first_id]
+    buf_texts = [first_text]
+    buf_embeddings = [first_emb.astype("float32")]
 
     shard_id = 0
     rows_emitted = 1
 
     def _flush_buffer() -> None:
-        nonlocal shard_id, buf_sentences, buf_labels
-        if not buf_sentences:
+        nonlocal shard_id, buf_ids, buf_texts, buf_embeddings
+        if not buf_texts:
             return
-        ds = Dataset.from_dict({"sentence": buf_sentences, "label": np.vstack(buf_labels)}, features=features)
+        ds = Dataset.from_dict(
+            {"id": buf_ids, "text": buf_texts, "embedding": np.vstack(buf_embeddings)}, features=features
+        )
         # Write a single parquet file per shard for simple globbing later
         shard_path = out_dir / f"shard_{shard_id:05d}.parquet"
         ds.to_parquet(str(shard_path))
         # release memory
         del ds
-        buf_sentences.clear()
-        buf_labels.clear()
+        buf_texts.clear()
+        buf_embeddings.clear()
         shard_id += 1
 
-    for text, emb in pair_iter:
-        buf_sentences.append(text)
-        buf_labels.append(emb.astype("float32"))
+    for identifier, text, emb in pair_iter:
+        buf_ids.append(identifier)
+        buf_texts.append(text)
+        buf_embeddings.append(emb.astype("float32"))
         rows_emitted += 1
-        if len(buf_sentences) >= rows_per_shard:
+        if len(buf_texts) >= rows_per_shard:
             _flush_buffer()
 
     # Flush remainder
