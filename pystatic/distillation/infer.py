@@ -2,22 +2,28 @@ import json
 import logging
 from collections.abc import Iterator
 from pathlib import Path
+from typing import TypeVar
 
+import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
+from transformers import BatchEncoding, PreTrainedTokenizer
 
 logger = logging.getLogger(__name__)
 
 
-def _batchify(texts: Iterator[str], batch_size: int) -> Iterator[list[str]]:
+T = TypeVar("T")
+
+
+def _batchify(records: Iterator[T], batch_size: int) -> Iterator[list[T]]:
     """Turn a list of texts into batches."""
-    batch: list[str] = []
+    batch: list[T] = []
     pbar = tqdm(total=0, unit="batches", desc="Creating batches")
     while True:
         if len(batch) < batch_size:
             try:
-                batch.append(next(texts))
+                batch.append(next(records))
             except StopIteration:
                 if len(batch) > 0:
                     yield batch
@@ -31,29 +37,41 @@ def _batchify(texts: Iterator[str], batch_size: int) -> Iterator[list[str]]:
 
 
 def _write_data(
-    path: Path,
-    all_pooled: list[torch.Tensor],
-    all_mean: list[torch.Tensor],
-    all_texts: list[str],
-    shard: int,
-    index: int,
+    path: Path, pooled: list[torch.Tensor], means: list[torch.Tensor], records: list[dict[str, str]], shard_index: int
 ) -> None:
     """Write out the data to disk."""
-    pooled_tensor = torch.cat(all_pooled, dim=0).half()
-    mean_tensor = torch.stack(all_mean, dim=0).half()
-    torch.save(pooled_tensor, path / f"pooled_{shard:04d}.pt")
-    torch.save(mean_tensor, path / f"mean_{shard:04d}.pt")
-    with open(path / f"texts_{shard:04d}.txt", "w", encoding="utf-8") as f:
-        # Save the shards saved so far, and the index of the text in the shard
-        # This allows us to easily match texts to embeddings later
-        for i, text in enumerate(all_texts):
-            line = json.dumps({"text": text, "index": index + i}, ensure_ascii=False)
+    pooled_tensor = torch.cat(pooled, dim=0).half()
+    mean_tensor = torch.stack(means, dim=0).half()
+    torch.save(pooled_tensor, path / f"pooled_{shard_index:04d}.pt")
+    torch.save(mean_tensor, path / f"mean_{shard_index:04d}.pt")
+    with open(path / f"texts_{shard_index:04d}.txt", "w", encoding="utf-8") as f:
+        for i, record in enumerate(records):
+            line = json.dumps({"text": record["truncated"], "id": record["id"], "index": i}, ensure_ascii=False)
             f.write(line + "\n")
+
+
+def _tokenize(strings: list[str], tokenizer: PreTrainedTokenizer, max_length: int) -> tuple[BatchEncoding, list[str]]:
+    """Tokenize a list of strings using a HuggingFace tokenizer."""
+    tokenized = tokenizer(
+        strings,
+        padding=True,
+        truncation=True,
+        max_length=max_length,
+        return_tensors="pt",
+        return_offsets_mapping=True,
+    )
+    offset_mapping = tokenized.pop("offset_mapping")
+
+    # The offset mapping is a 3D array (batch, max_length_in_batch, 2), with offsets
+    # Where the final dimension is start, end indices. So by taking the max end index
+    # we know the length to which the tokenizer tokenized the string.
+    lengths = np.asarray(offset_mapping)[:, :, 1].max(axis=1)
+    return tokenized, [string[:length] for string, length in zip(strings, lengths)]
 
 
 def infer(
     model: SentenceTransformer,
-    texts: Iterator[str],
+    records: Iterator[dict[str, str]],
     name: str,
     batch_size: int = 96,
     max_length: int = 512,
@@ -73,10 +91,10 @@ def infer(
     Args:
     ----
         model: The SentenceTransformer model to use for inference.
-        texts: A sequence of texts to infer embeddings for.
+        records: A sequence of records to infer embeddings for.
         batch_size: The batch size to use for inference. Defaults to 96.
         max_length: The maximum sequence length for tokenization. Defaults to 512.
-        save_every: Save intermediate results every N texts. Defaults to 8192.
+        save_every: Save intermediate results every N batches. Defaults to 8192.
         name: The name of the directory to save the results to.
 
     """
@@ -86,12 +104,12 @@ def infer(
     path.mkdir(parents=True, exist_ok=True)
     shards_saved = 0
 
-    all_pooled, all_mean, all_texts = [], [], []
-
+    all_pooled, all_mean, accumulated_records = [], [], []
+    tokenizer: PreTrainedTokenizer = model.tokenizer
     original_max_length = model[0].max_seq_length
     assert original_max_length is not None
     assert isinstance(original_max_length, int)
-    if max_length >= original_max_length:
+    if max_length > original_max_length:
         logger.warning(
             f"Warning: max_length {max_length} is greater than the model's max_length {original_max_length}. Not changing it."
         )
@@ -100,17 +118,18 @@ def infer(
 
     seen = 0
     with torch.inference_mode(), torch.autocast(device_type="cuda", dtype=torch.float16):
-        for batch in _batchify(texts, batch_size=batch_size):
-            features = model.tokenize(batch)
-            features = {k: v.to(model.device) for k, v in features.items()}
+        for batch in _batchify(records, batch_size=batch_size):
+            texts = [record["text"] for record in batch]
+            features, truncated_strings = _tokenize(texts, tokenizer, max_length)
+            features_dict = {k: v.to(model.device) for k, v in features.items()}
 
             # One forward through the whole SentenceTransformer
-            out = model(features)
+            out = model(features_dict)
             pooled = out["sentence_embedding"].cpu()
             tokens = out["token_embeddings"].cpu()
             masks = out["attention_mask"].cpu()
 
-            for token_sequence, mask, input_ids in zip(tokens, masks, features["input_ids"]):
+            for record, token_sequence, mask, truncated in zip(batch, tokens, masks, truncated_strings):
                 first_zero_index = mask.argmin() - 1
 
                 meaned = token_sequence[1:first_zero_index]
@@ -122,8 +141,9 @@ def infer(
                     meaned = meaned.mean(dim=0).cpu()
 
                 all_mean.append(meaned)
-                all_texts.append(model.tokenizer.decode(input_ids, skip_special_tokens=True))
+                record["truncated"] = truncated
 
+                accumulated_records.append(record)
             all_pooled.append(pooled.cpu())
             del tokens
             del pooled
@@ -132,11 +152,11 @@ def infer(
             seen += 1
             if seen % save_every == 0:
                 logger.info(f"Seen {seen * batch_size} texts, saving intermediate results to disk.")
-                _write_data(path, all_pooled, all_mean, all_texts, shards_saved, (seen * batch_size) - len(all_texts))
+                _write_data(path, all_pooled, all_mean, accumulated_records, shards_saved)
                 shards_saved += 1
                 all_pooled = []
                 all_mean = []
-                all_texts = []
+                accumulated_records = []
 
-    if len(all_texts) > 0:
-        _write_data(path, all_pooled, all_mean, all_texts, shards_saved, (seen * batch_size) - len(all_texts))
+    if accumulated_records:
+        _write_data(path, all_pooled, all_mean, accumulated_records, shards_saved)
