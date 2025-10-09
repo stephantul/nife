@@ -2,7 +2,7 @@ import json
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TypeVar
+from typing import TypeVar, cast
 
 import numpy as np
 import torch
@@ -76,6 +76,7 @@ def infer(
     batch_size: int = 96,
     max_length: int = 512,
     save_every: int = 8192,
+    prompt: str | None = None,
 ) -> None:
     """
     Infer embeddings for a list of texts using a SentenceTransformer model.
@@ -96,6 +97,7 @@ def infer(
         max_length: The maximum sequence length for tokenization. Defaults to 512.
         save_every: Save intermediate results every N batches. Defaults to 8192.
         name: The name of the directory to save the results to.
+        prompt: An optional prompt to prepend to each text before encoding.
 
     """
     model.eval()
@@ -116,10 +118,22 @@ def infer(
     else:
         model[0].max_seq_length = max_length  # type: ignore[assignment]
 
+    if prompt is not None:
+        tokenized_prompt, text_prompt = _tokenize([prompt] if prompt is not None else [""], tokenizer, max_length=512)
+        input_ids = cast(torch.Tensor, tokenized_prompt["input_ids"]).tolist()
+        prompt_length = cast(int, len(input_ids))
+        text_prompt_length = len(text_prompt[0]) + 1  # 1 extra for the space
+    else:
+        prompt_length = 0
+        text_prompt_length = 0
+
     seen = 0
     with torch.inference_mode(), torch.autocast(device_type="cuda", dtype=torch.float16):
         for batch in _batchify(records, batch_size=batch_size):
-            texts = [record["text"] for record in batch]
+            if prompt is None:
+                texts = [record["text"] for record in batch]
+            else:
+                texts = [f"{prompt} {record['text']}" for record in batch]
             features, truncated_strings = _tokenize(texts, tokenizer, max_length)
             features_dict = {k: v.to(model.device) for k, v in features.items()}
 
@@ -132,7 +146,7 @@ def infer(
             for record, token_sequence, mask, truncated in zip(batch, tokens, masks, truncated_strings):
                 first_zero_index = mask.argmin() - 1
 
-                meaned = token_sequence[1:first_zero_index]
+                meaned = token_sequence[1 + prompt_length : first_zero_index]
                 if len(meaned) == 0:  # happens when the input is empty or only special tokens
                     dim = model.get_sentence_embedding_dimension()
                     assert dim is not None
@@ -141,7 +155,7 @@ def infer(
                     meaned = meaned.mean(dim=0).cpu()
 
                 all_mean.append(meaned)
-                record["truncated"] = truncated
+                record["truncated"] = truncated[text_prompt_length:]
 
                 accumulated_records.append(record)
             all_pooled.append(pooled.cpu())
