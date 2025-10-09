@@ -86,8 +86,9 @@ def build_parquet_shards_from_folder(
     D = int(first_emb.shape[0])
     features = Features(
         {
-            "sentence": Value("string"),
-            "label": Sequence(Value("float32"), length=D),
+            "id": Value("string"),
+            "text": Value("string"),
+            "embedding": Sequence(Value("float32"), length=D),
         }
     )
 
@@ -107,7 +108,7 @@ def build_parquet_shards_from_folder(
             {"id": buf_ids, "text": buf_texts, "embedding": np.vstack(buf_embeddings)}, features=features
         )
         # Write a single parquet file per shard for simple globbing later
-        shard_path = out_dir / f"shard_{shard_id:05d}.parquet"
+        shard_path = out_dir / "train" / f"shard_{shard_id:05d}.parquet"
         ds.to_parquet(str(shard_path))
         # release memory
         del ds
@@ -136,7 +137,7 @@ def _parse_args() -> argparse.Namespace:
         "--embedding-type",
         type=str,
         choices=[e.value for e in EmbeddingType],
-        default=EmbeddingType.POOLED,
+        default="pooled",
         help="Type of embeddings to use (pooled or mean).",
     )
     parser.add_argument("--truncate-dim", type=int, default=None, help="Truncate embeddings to this dimension.")

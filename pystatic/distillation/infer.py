@@ -119,10 +119,11 @@ def infer(
         model[0].max_seq_length = max_length  # type: ignore[assignment]
 
     if prompt is not None:
+        prompt = prompt.strip()
         tokenized_prompt, text_prompt = _tokenize([prompt] if prompt is not None else [""], tokenizer, max_length=512)
         input_ids = cast(torch.Tensor, tokenized_prompt["input_ids"]).tolist()
         prompt_length = cast(int, len(input_ids))
-        text_prompt_length = len(text_prompt[0]) + 1  # 1 extra for the space
+        text_prompt_length = len(text_prompt[0].strip()) + 1  # +1 for the space
     else:
         prompt_length = 0
         text_prompt_length = 0

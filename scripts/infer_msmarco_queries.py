@@ -15,10 +15,11 @@ if __name__ == "__main__":
     model_name = "mixedbread-ai/mxbai-embed-large-v1"
     model = SentenceTransformer(model_name)
 
-    name = "english-words-definitions"
-    dataset = cast(Dataset, load_dataset("MongoDB/english-words-definitions", split="train"))
-    dataset = dataset.map(lambda x: {"text": " ".join(x["definitions"])})
-    dataset = dataset.add_column("id", [str(i) for i in range(len(dataset))], new_fingerprint="added_ids")
-    dataset = dataset.filter(lambda x: len(x["text"].strip()) > 0)
+    prompt = model.prompts.get("query", None)
+
+    name = "mteb/msmarco"
+
+    dataset = cast(Dataset, load_dataset(name, "queries", split="queries"))
+    dataset = dataset.rename_column("_id", "id")
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
-    infer(model, dataset_iterator, batch_size=8, name=f"output/{name}", save_every=16384)
+    infer(model, dataset_iterator, batch_size=8, name="output/msmarco", save_every=16384, prompt=prompt)
