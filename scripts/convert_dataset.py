@@ -114,6 +114,7 @@ def build_parquet_shards_from_folder(
         del ds
         buf_texts.clear()
         buf_embeddings.clear()
+        buf_ids.clear()
         shard_id += 1
 
     for identifier, text, emb in pair_iter:

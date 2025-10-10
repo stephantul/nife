@@ -1,11 +1,11 @@
 import argparse
 import logging
 import random
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
+from pathlib import Path
 from typing import cast
 
 import torch
-from datasets import Dataset, load_dataset, load_from_disk
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -19,6 +19,7 @@ from skeletoken import TokenizerModel
 from torch import Tensor, nn
 
 import wandb
+from datasets import Dataset, DatasetDict, load_dataset
 
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -41,6 +42,24 @@ class CosineLoss(MSELoss):
 
         embeddings = self.model(sentence_features[0])["sentence_embedding"]
         return 1 - self.loss_fct(embeddings, labels[:, : embeddings.shape[1]]).mean()
+
+
+def datasets_from_root_path(root: Path) -> DatasetDict:
+    """Load all datasets from a root path."""
+    paths = (path for path in root.glob("*") if path.is_dir())
+    return datasets(paths)
+
+
+def datasets(paths: Iterator[Path]) -> DatasetDict:
+    """Load the datasets."""
+    d = {}
+    for path in paths:
+        dataset = cast(DatasetDict, load_dataset(str(path)))
+        dataset = dataset.rename_column("text", "sentence")
+        dataset = dataset.rename_column("embedding", "label")
+        d[str(path)] = dataset["train"]
+
+    return DatasetDict(d)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -87,9 +106,10 @@ if __name__ == "__main__":
     matryoshka_dims = [d for d in matryoshka_dims if d <= model_dim]
     loss = MatryoshkaLoss(model, base_loss, matryoshka_dims=matryoshka_dims)
 
-    train_dataset = load_from_disk(parsed_args.train_dataset)
+    train_dataset = datasets_from_root_path(Path(parsed_args.train_dataset))
+    # train_dataset = cast(Dataset, load_dataset("stsb_multi_mt", "en", split="train"))
 
-    run_name = f"distillation-{model_dim}-matryoshka-cosine-mean-constant"
+    run_name = f"distillation-{model_dim}-matryoshka-cosine-mean-constant-new-data"
     wandb.init(project="distillation", name=run_name)
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
@@ -98,9 +118,9 @@ if __name__ == "__main__":
         num_train_epochs=5,
         per_device_train_batch_size=2048,
         per_device_eval_batch_size=2048,
-        learning_rate=0.05,
-        lr_scheduler_type="constant",
-        warmup_ratio=0.0,
+        learning_rate=0.2,
+        lr_scheduler_type="linear",
+        warmup_ratio=0.1,
         fp16=False,  # Set to False if you get an error that your GPU can't run on FP16
         bf16=True,  # Set to True if you have a GPU that supports BF16
         # Optional tracking/debugging parameters:
