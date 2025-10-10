@@ -20,4 +20,4 @@ if __name__ == "__main__":
     dataset = cast(Dataset, load_dataset(name, "corpus", split="corpus"))
     dataset = dataset.rename_column("_id", "id")
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
-    infer(model, dataset_iterator, batch_size=8, name="output/msmarco", save_every=16384)
+    infer(model, dataset_iterator, batch_size=512, name="output/msmarco", save_every=256)
