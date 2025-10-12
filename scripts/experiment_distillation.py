@@ -1,7 +1,7 @@
 import argparse
 import logging
 import random
-from collections.abc import Iterator, Sequence
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
 
@@ -64,24 +64,14 @@ class CosineLoss(MSELoss):
 
 def datasets(paths: Sequence[Path]) -> IterableDataset:
     """Load the datasets."""
-    d = []
-    features = None
+    all_shards = []
     for path in paths:
-        dataset = load_dataset(str(path), split="train", streaming=True)
-        dataset = cast(Dataset, dataset)
-        dataset = dataset.rename_column("text", "sentence")
-        dataset = dataset.rename_column("embedding", "label")
-        d.append(dataset)
-        features = dataset.features
+        all_shards.extend([str(x) for x in Path(path).glob("**/*.parquet")])
+    dataset = load_dataset("parquet", data_files=all_shards, split="train", streaming=True)
+    dataset = dataset.rename_column("text", "sentence")
+    dataset = dataset.rename_column("embedding", "label")
 
-    assert features is not None
-
-    def generator_func() -> Iterator[dict[str, Tensor]]:
-        for dataset in d:
-            for example in dataset:
-                yield example
-
-    return IterableDataset.from_generator(generator_func, features=features)
+    return dataset
 
 
 def _parse_args() -> argparse.Namespace:
