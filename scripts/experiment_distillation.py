@@ -3,27 +3,42 @@ import logging
 import random
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import cast
+from typing import Any, cast
 
 import torch
+from datasets import Dataset, IterableDataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
     SentenceTransformerTrainingArguments,
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
-from sentence_transformers.losses import MatryoshkaLoss, MSELoss
+from sentence_transformers.losses import MSELoss
 from sentence_transformers.models import StaticEmbedding
 from sentence_transformers.similarity_functions import SimilarityFunction
 from skeletoken import TokenizerModel
 from torch import Tensor, nn
 
-import wandb
-from datasets import Dataset, DatasetDict, load_dataset
-
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
 logger = logging.getLogger(__name__)
 random.seed(12)
+
+logger = logging.getLogger(__name__)
+
+
+class TrainableStaticEmbedding(StaticEmbedding):
+    def tokenize(self, texts: list[str], **kwargs: Any) -> dict[str, torch.Tensor]:
+        """Tokenize the texts."""
+        encodings = self.tokenizer.encode_batch(texts, add_special_tokens=False)
+        encodings_ids = [torch.Tensor(encoding.ids[:512]).long() for encoding in encodings]
+
+        input_ids = torch.nn.utils.rnn.pad_sequence(encodings_ids, batch_first=True, padding_value=0)
+        return {"input_ids": input_ids}
+
+    def forward(self, features: dict[str, torch.Tensor], **kwargs: Any) -> dict[str, torch.Tensor]:
+        """Forward pass."""
+        features["sentence_embedding"] = self.embedding(features["input_ids"])
+        return features
 
 
 class CosineLoss(MSELoss):
@@ -41,25 +56,30 @@ class CosineLoss(MSELoss):
             return 1 - self.loss_fct(embeddings, labels.repeat(len(sentence_features), 1)).mean()
 
         embeddings = self.model(sentence_features[0])["sentence_embedding"]
+        labels = labels[:, : embeddings.shape[1]]
         return 1 - self.loss_fct(embeddings, labels[:, : embeddings.shape[1]]).mean()
 
 
-def datasets_from_root_path(root: Path) -> DatasetDict:
-    """Load all datasets from a root path."""
-    paths = (path for path in root.glob("*") if path.is_dir())
-    return datasets(paths)
-
-
-def datasets(paths: Iterator[Path]) -> DatasetDict:
+def datasets(paths: Sequence[Path]) -> IterableDataset:
     """Load the datasets."""
-    d = {}
+    d = []
+    features = None
     for path in paths:
-        dataset = cast(DatasetDict, load_dataset(str(path)))
+        dataset = load_dataset(str(path), split="train", streaming=True)
+        dataset = cast(Dataset, dataset)
         dataset = dataset.rename_column("text", "sentence")
         dataset = dataset.rename_column("embedding", "label")
-        d[str(path)] = dataset["train"]
+        d.append(dataset)
+        features = dataset.features
 
-    return DatasetDict(d)
+    assert features is not None
+
+    def generator_func() -> Iterator[dict[str, Tensor]]:
+        for dataset in d:
+            for example in dataset:
+                yield example
+
+    return IterableDataset.from_generator(generator_func, features=features)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -68,7 +88,8 @@ def _parse_args() -> argparse.Namespace:
         "--train-dataset",
         type=str,
         required=True,
-        help="Path to the training dataset (in HuggingFace datasets format).",
+        help="Path to the training datasets",
+        nargs="+",
     )
     parser.add_argument("--model-dim", type=int, default=1024, help="Dimensionality of the model.")
     parser.add_argument("--batch-size", type=int, default=2048, help="Batch size for training.")
@@ -82,7 +103,7 @@ if __name__ == "__main__":
     parsed_args = _parse_args()
     model_dim = parsed_args.model_dim
     tokenizer = TokenizerModel.from_pretrained(parsed_args.tokenizer_path).to_transformers()
-    s = StaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
+    s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
     # tokenizer = TokenizerModel.from_pretrained("../static-trainer/models/static-retrieval-mrl-en-1024-0.2-60k/final/tokenizer.json").to_transformers()
     # s = StaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
     model = SentenceTransformer(modules=[s])
@@ -104,20 +125,27 @@ if __name__ == "__main__":
         dims.append(dims[-1] // 2)
     matryoshka_dims = sorted(dims)
     matryoshka_dims = [d for d in matryoshka_dims if d <= model_dim]
-    loss = MatryoshkaLoss(model, base_loss, matryoshka_dims=matryoshka_dims)
+    # loss = MatryoshkaLoss(model, base_loss, matryoshka_dims=matryoshka_dims)
+    loss = base_loss
 
-    train_dataset = datasets_from_root_path(Path(parsed_args.train_dataset))
-    # train_dataset = cast(Dataset, load_dataset("stsb_multi_mt", "en", split="train"))
+    train_dataset = datasets([Path(path) for path in parsed_args.train_dataset])
 
-    run_name = f"distillation-{model_dim}-matryoshka-cosine-mean-constant-new-data"
-    wandb.init(project="distillation", name=run_name)
+    logging_step = 51200 // parsed_args.batch_size
+    eval_step = save_step = 4 * logging_step
+
+    n_samples = 8840000 + 14900000 + 1000000
+    n_steps = n_samples // parsed_args.batch_size
+
+    run_name = f"distillation-{model_dim}-matryoshka-cosine-pooled-dense-newer-data-low-bs"
+    # wandb.init(project="distillation", name=run_name)
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
         output_dir=f"models/{run_name}",
         # Optional training parameters:
-        num_train_epochs=5,
-        per_device_train_batch_size=2048,
-        per_device_eval_batch_size=2048,
+        num_train_epochs=parsed_args.epochs,
+        max_steps=n_steps * parsed_args.epochs,
+        per_device_train_batch_size=parsed_args.batch_size,
+        per_device_eval_batch_size=parsed_args.batch_size,
         learning_rate=0.2,
         lr_scheduler_type="linear",
         warmup_ratio=0.1,
@@ -125,11 +153,11 @@ if __name__ == "__main__":
         bf16=True,  # Set to True if you have a GPU that supports BF16
         # Optional tracking/debugging parameters:
         eval_strategy="steps",
-        eval_steps=100,
+        eval_steps=eval_step,
         save_strategy="steps",
-        save_steps=100,
+        save_steps=save_step,
         save_total_limit=2,
-        logging_steps=25,
+        logging_steps=logging_step,
         logging_first_step=True,
         run_name=run_name,
         use_cpu=False,
