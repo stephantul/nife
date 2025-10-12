@@ -19,6 +19,8 @@ from sentence_transformers.similarity_functions import SimilarityFunction
 from skeletoken import TokenizerModel
 from torch import Tensor, nn
 
+import wandb
+
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
 logger = logging.getLogger(__name__)
 random.seed(12)
@@ -136,8 +138,8 @@ if __name__ == "__main__":
     n_samples = 8840000 + 14900000 + 1000000
     n_steps = n_samples // parsed_args.batch_size
 
-    run_name = f"distillation-{model_dim}-matryoshka-cosine-pooled-dense-newer-data-low-bs"
-    # wandb.init(project="distillation", name=run_name)
+    run_name = f"distillation-{model_dim}-cosine"
+    wandb.init(project="distillation", name=run_name)
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
         output_dir=f"models/{run_name}",
