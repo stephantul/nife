@@ -13,7 +13,7 @@ from sentence_transformers import (
     SentenceTransformerTrainingArguments,
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
-from sentence_transformers.losses import MSELoss
+from sentence_transformers.losses import MatryoshkaLoss, MSELoss
 from sentence_transformers.models import StaticEmbedding
 from sentence_transformers.similarity_functions import SimilarityFunction
 from skeletoken import TokenizerModel
@@ -67,15 +67,21 @@ def datasets(paths: Sequence[Path]) -> IterableDataset:
     all_shards = []
     for path in paths:
         all_shards.extend([str(x) for x in Path(path).glob("**/*.parquet")])
+    random.shuffle(all_shards)
     dataset = load_dataset("parquet", data_files=all_shards, split="train", streaming=True)
     dataset = dataset.rename_column("text", "sentence")
     dataset = dataset.rename_column("embedding", "label")
+    column_names = dataset.column_names
+    assert column_names is not None
+    columns_to_drop = [c for c in column_names if c not in ("sentence", "label")]
+    dataset = dataset.remove_columns(columns_to_drop)
 
-    return dataset
+    return cast(IterableDataset, dataset)
 
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Distillation experiment.")
+    parser.add_argument("name", help="Name of the experiment.")
     parser.add_argument(
         "--train-dataset",
         type=str,
@@ -96,8 +102,6 @@ if __name__ == "__main__":
     model_dim = parsed_args.model_dim
     tokenizer = TokenizerModel.from_pretrained(parsed_args.tokenizer_path).to_transformers()
     s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
-    # tokenizer = TokenizerModel.from_pretrained("../static-trainer/models/static-retrieval-mrl-en-1024-0.2-60k/final/tokenizer.json").to_transformers()
-    # s = StaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
     model = SentenceTransformer(modules=[s])
 
     stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
@@ -111,28 +115,41 @@ if __name__ == "__main__":
         name="sts-dev",
     )
 
+    # Workaround for local development
+    n_workers = 8
+    prefetch_factor: int | None = 2
+    if torch.mps.is_available():
+        n_workers = 0
+        prefetch_factor = None
+
+    name = parsed_args.name
+    logger.info(f"Starting experiment: {name}")
+
     base_loss = CosineLoss(model=model)
     dims = [model_dim]
     while dims[-1] > 32:
         dims.append(dims[-1] // 2)
     matryoshka_dims = sorted(dims)
     matryoshka_dims = [d for d in matryoshka_dims if d <= model_dim]
-    # loss = MatryoshkaLoss(model, base_loss, matryoshka_dims=matryoshka_dims)
-    loss = base_loss
+    loss = MatryoshkaLoss(model, base_loss, matryoshka_dims=matryoshka_dims)
 
     train_dataset = datasets([Path(path) for path in parsed_args.train_dataset])
 
+    # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
     logging_step = 51200 // parsed_args.batch_size
+    # Evaluate and save every 4 times the logging step
     eval_step = save_step = 4 * logging_step
 
+    # Approximate number of samples in the dataset
+    # This is a rough estimate, adjust if needed
     n_samples = 8840000 + 14900000 + 1000000
+    # Number of steps per epoch
     n_steps = n_samples // parsed_args.batch_size
 
-    run_name = f"distillation-{model_dim}-cosine"
-    wandb.init(project="distillation", name=run_name)
+    wandb.init(project="distillation", name=name)
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
-        output_dir=f"models/{run_name}",
+        output_dir=f"models/{name}",
         # Optional training parameters:
         num_train_epochs=parsed_args.epochs,
         max_steps=n_steps * parsed_args.epochs,
@@ -151,15 +168,15 @@ if __name__ == "__main__":
         save_total_limit=2,
         logging_steps=logging_step,
         logging_first_step=True,
-        run_name=run_name,
+        run_name=name,
         use_cpu=False,
         report_to=["wandb"],
         weight_decay=0.0,
         load_best_model_at_end=False,
         greater_is_better=True,
         metric_for_best_model="sts-dev_spearman_cosine",
-        dataloader_num_workers=8,
-        dataloader_prefetch_factor=2,
+        dataloader_num_workers=n_workers,
+        dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
     )
 
@@ -173,4 +190,4 @@ if __name__ == "__main__":
     trainer.train()
 
     dev_evaluator_stsb(model)
-    model.save_pretrained(f"models/{run_name}/final")
+    model.save_pretrained(f"models/{name}/final")
