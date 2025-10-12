@@ -166,6 +166,9 @@ if __name__ == "__main__":
         load_best_model_at_end=False,
         greater_is_better=True,
         metric_for_best_model="sts-dev_spearman_cosine",
+        dataloader_num_workers=8,
+        dataloader_prefetch_factor=2,
+        dataloader_pin_memory=True,
     )
 
     trainer = SentenceTransformerTrainer(
