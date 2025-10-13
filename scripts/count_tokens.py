@@ -1,11 +1,10 @@
-import json
 import random
 from argparse import ArgumentParser, Namespace
 from collections import Counter
 from pathlib import Path
 from typing import Sequence, cast
 
-from datasets import IterableDataset, concatenate_datasets, load_dataset
+from datasets import Dataset, IterableDataset, concatenate_datasets, load_dataset
 from skeletoken import TokenizerModel
 from skeletoken.preprocessor import Preprocessor
 from tqdm import tqdm
@@ -62,8 +61,16 @@ if __name__ == "__main__":
     data = datasets([Path(p) for p in parsed_args.datasets], in_memory=parsed_args.in_memory)
 
     counts: Counter[str] = Counter()
+    df: Counter[str] = Counter()
     for example in tqdm(data):
         text = example["text"]
-        counts.update(preprocessor.preprocess(text))
+        tokens = preprocessor.preprocess(text)
+        counts.update(tokens)
+        df.update(set(tokens))
 
-    json.dump(counts, open(parsed_args.output, "w"), indent=2)
+    toks, token_counts = zip(*sorted(counts.items(), key=lambda x: x[1], reverse=True))
+    token_dfs = [df[t] for t in toks]
+
+    d = {"token": toks, "frequency": token_counts, "document_frequency": token_dfs}
+    dataset = Dataset.from_dict(d)
+    dataset.save_to_disk(parsed_args.output)
