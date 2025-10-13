@@ -44,8 +44,7 @@ class TrainableStaticEmbedding(StaticEmbedding):
         super().__init__(
             tokenizer=tokenizer, embedding_dim=embedding_dim, embedding_weights=embedding_weights, **kwargs
         )
-        self.embedding.mode = "sum"
-        self.w = nn.Embedding.from_pretrained(torch.ones(self.tokenizer.get_vocab_size(), 1), freeze=False)
+        # self.w = nn.Embedding.from_pretrained(torch.zeros(self.tokenizer.get_vocab_size(), 1), freeze=False)
         self.normalizer = nn.LayerNorm(self.embedding_dim)
 
     def tokenize(self, texts: list[str], **kwargs: Any) -> dict[str, torch.Tensor]:
@@ -58,15 +57,15 @@ class TrainableStaticEmbedding(StaticEmbedding):
 
     def forward(self, features: dict[str, torch.Tensor], **kwargs: Any) -> dict[str, torch.Tensor]:
         """Forward pass."""
-        sample_weights = torch.sigmoid(self.w(features["input_ids"]).squeeze(-1))
-        x = self.embedding(features["input_ids"], per_sample_weights=sample_weights)
+        x = self.embedding(features["input_ids"])
         x = self.normalizer(x)
         features["sentence_embedding"] = x
         return features
 
     def collapse(self) -> StaticEmbedding:
         """Collapse to a non-trainable StaticEmbedding."""
-        emb_weights = self.embedding.weight * torch.sigmoid(self.w.weight)
+        emb_weights = self.embedding.weight.data.clone()
+        # emb_weights = emb_weights * torch.sigmoid(self.w.weight)
         emb_weights = self.normalizer(emb_weights)
         return StaticEmbedding(
             tokenizer=self.tokenizer, embedding_weights=emb_weights, embedding_dim=self.embedding_dim
