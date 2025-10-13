@@ -166,7 +166,7 @@ if __name__ == "__main__":
     )
 
     # Workaround for local development
-    n_workers = 8
+    n_workers = 7
     prefetch_factor: int | None = 2
     if torch.mps.is_available():
         n_workers = 0
