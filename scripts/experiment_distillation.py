@@ -5,8 +5,10 @@ from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, cast
 
+import numpy as np
+import pyarrow.parquet as pq
 import torch
-from datasets import Dataset, IterableDataset, load_dataset
+from datasets import Dataset, DatasetDict, IterableDataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -17,7 +19,9 @@ from sentence_transformers.losses import MatryoshkaLoss, MSELoss
 from sentence_transformers.models import StaticEmbedding
 from sentence_transformers.similarity_functions import SimilarityFunction
 from skeletoken import TokenizerModel
+from tokenizers import Tokenizer
 from torch import Tensor, nn
+from transformers import PreTrainedTokenizerFast
 
 import wandb
 
@@ -29,6 +33,21 @@ logger = logging.getLogger(__name__)
 
 
 class TrainableStaticEmbedding(StaticEmbedding):
+    def __init__(
+        self,
+        tokenizer: Tokenizer | PreTrainedTokenizerFast,
+        embedding_weights: np.ndarray | torch.Tensor | None = None,
+        embedding_dim: int | None = None,
+        **kwargs: Any,
+    ) -> None:
+        """Static embedding layer with trainable weights."""
+        super().__init__(
+            tokenizer=tokenizer, embedding_dim=embedding_dim, embedding_weights=embedding_weights, **kwargs
+        )
+        self.embedding.mode = "sum"
+        self.w = nn.Embedding.from_pretrained(torch.ones(self.tokenizer.get_vocab_size(), 1), freeze=False)
+        self.normalizer = nn.LayerNorm(self.embedding_dim)
+
     def tokenize(self, texts: list[str], **kwargs: Any) -> dict[str, torch.Tensor]:
         """Tokenize the texts."""
         encodings = self.tokenizer.encode_batch(texts, add_special_tokens=False)
@@ -39,8 +58,19 @@ class TrainableStaticEmbedding(StaticEmbedding):
 
     def forward(self, features: dict[str, torch.Tensor], **kwargs: Any) -> dict[str, torch.Tensor]:
         """Forward pass."""
-        features["sentence_embedding"] = self.embedding(features["input_ids"])
+        sample_weights = torch.sigmoid(self.w(features["input_ids"]).squeeze(-1))
+        x = self.embedding(features["input_ids"], per_sample_weights=sample_weights)
+        x = self.normalizer(x)
+        features["sentence_embedding"] = x
         return features
+
+    def collapse(self) -> StaticEmbedding:
+        """Collapse to a non-trainable StaticEmbedding."""
+        emb_weights = self.embedding.weight * torch.sigmoid(self.w.weight)
+        emb_weights = self.normalizer(emb_weights)
+        return StaticEmbedding(
+            tokenizer=self.tokenizer, embedding_weights=emb_weights, embedding_dim=self.embedding_dim
+        )
 
 
 class CosineLoss(MSELoss):
@@ -62,11 +92,28 @@ class CosineLoss(MSELoss):
         return 1 - self.loss_fct(embeddings, labels[:, : embeddings.shape[1]]).mean()
 
 
-def datasets(paths: Sequence[Path]) -> IterableDataset:
+def datasets(paths: Sequence[Path], in_memory: bool = True) -> tuple[IterableDataset | DatasetDict, int]:
     """Load the datasets."""
+    length = 0
+    if in_memory:
+        datasets = {}
+        for path in paths:
+            dataset = load_dataset(path=str(path), split="train")
+            length += len(dataset)
+            dataset = dataset.rename_column("text", "sentence")
+            dataset = dataset.rename_column("embedding", "label")
+            column_names = dataset.column_names
+            assert column_names is not None
+            columns_to_drop = [c for c in column_names if c not in ("sentence", "label")]
+            dataset = dataset.remove_columns(columns_to_drop)
+            datasets[path.stem] = dataset
+        return DatasetDict(datasets), length
+
     all_shards = []
     for path in paths:
         all_shards.extend([str(x) for x in Path(path).glob("**/*.parquet")])
+    for shard in all_shards:
+        length += pq.read_metadata(shard).num_rows
     random.shuffle(all_shards)
     dataset = load_dataset("parquet", data_files=all_shards, split="train", streaming=True)
     dataset = dataset.rename_column("text", "sentence")
@@ -76,7 +123,7 @@ def datasets(paths: Sequence[Path]) -> IterableDataset:
     columns_to_drop = [c for c in column_names if c not in ("sentence", "label")]
     dataset = dataset.remove_columns(columns_to_drop)
 
-    return cast(IterableDataset, dataset)
+    return cast(IterableDataset, dataset), length
 
 
 def _parse_args() -> argparse.Namespace:
@@ -93,13 +140,17 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--batch-size", type=int, default=2048, help="Batch size for training.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of epochs for training.")
     parser.add_argument("--learning-rate", type=float, default=0.05, help="Learning rate for training.")
-    parser.add_argument("--tokenizer-path", type=str, default="bert-base-uncased", help="Path to the tokenizer.")
+    parser.add_argument(
+        "--tokenizer-path", type=str, default="mixedbread-ai/mxbai-embed-large-v1", help="Path to the tokenizer."
+    )
+    parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
     return parser.parse_args()
 
 
 if __name__ == "__main__":
     parsed_args = _parse_args()
     model_dim = parsed_args.model_dim
+
     tokenizer = TokenizerModel.from_pretrained(parsed_args.tokenizer_path).to_transformers()
     s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
     model = SentenceTransformer(modules=[s])
@@ -126,23 +177,22 @@ if __name__ == "__main__":
     logger.info(f"Starting experiment: {name}")
 
     base_loss = CosineLoss(model=model)
-    dims = [model_dim]
+    dims = [1024]
     while dims[-1] > 32:
         dims.append(dims[-1] // 2)
     matryoshka_dims = sorted(dims)
     matryoshka_dims = [d for d in matryoshka_dims if d <= model_dim]
     loss = MatryoshkaLoss(model, base_loss, matryoshka_dims=matryoshka_dims)
 
-    train_dataset = datasets([Path(path) for path in parsed_args.train_dataset])
+    train_dataset, n_samples = datasets(
+        [Path(path) for path in parsed_args.train_dataset], in_memory=parsed_args.in_memory
+    )
 
     # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
     logging_step = 51200 // parsed_args.batch_size
     # Evaluate and save every 4 times the logging step
     eval_step = save_step = 4 * logging_step
 
-    # Approximate number of samples in the dataset
-    # This is a rough estimate, adjust if needed
-    n_samples = 8840000 + 14900000 + 1000000
     # Number of steps per epoch
     n_steps = n_samples // parsed_args.batch_size
 
@@ -155,11 +205,11 @@ if __name__ == "__main__":
         max_steps=n_steps * parsed_args.epochs,
         per_device_train_batch_size=parsed_args.batch_size,
         per_device_eval_batch_size=parsed_args.batch_size,
-        learning_rate=0.2,
+        learning_rate=parsed_args.learning_rate,
         lr_scheduler_type="linear",
-        warmup_ratio=0.1,
+        warmup_ratio=0.0,
         fp16=False,  # Set to False if you get an error that your GPU can't run on FP16
-        bf16=True,  # Set to True if you have a GPU that supports BF16
+        bf16=False,  # Set to True if you have a GPU that supports BF16
         # Optional tracking/debugging parameters:
         eval_strategy="steps",
         eval_steps=eval_step,

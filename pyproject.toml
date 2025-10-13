@@ -10,7 +10,7 @@ dependencies = [
     "sentence-transformers",
     "numpy",
     "datasets",
-    "skeletoken",
+    "skeletoken @ git+https://github.com/stephantul/skeletoken.git",
     "wandb",
 ]
 

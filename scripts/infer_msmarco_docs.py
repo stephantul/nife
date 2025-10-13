@@ -3,9 +3,9 @@
 import logging
 from typing import Iterator, cast
 
+from datasets import Dataset, load_dataset
 from sentence_transformers import SentenceTransformer
 
-from datasets import Dataset, load_dataset
 from pystatic.distillation.helpers import get_prompt_from_model, parse_inference_args
 from pystatic.distillation.infer import infer
 
@@ -22,7 +22,7 @@ if __name__ == "__main__":
     suffix = f"-{args.prompt_name}" if args.prompt_name is not None else ""
 
     name = "mteb/msmarco"
-    dataset = cast(Dataset, load_dataset(name, "corpus", split="corpus"))
+    dataset = cast(Dataset, load_dataset(name, "corpus", split="corpus", streaming=True))
     dataset = dataset.rename_column("_id", "id")
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
     infer(model, dataset_iterator, batch_size=512, name=f"output/msmarco{suffix}", save_every=256)

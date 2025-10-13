@@ -13,12 +13,6 @@ def parse_inference_args() -> Namespace:
         help="Name of the pre-trained model to use for inference.",
     )
     parser.add_argument(
-        "--output_dir",
-        type=str,
-        required=True,
-        help="Directory to save the inferenced data.",
-    )
-    parser.add_argument(
         "--prompt-name",
         type=str,
         default=None,
