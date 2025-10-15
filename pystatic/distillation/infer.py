@@ -2,7 +2,7 @@ import json
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import TypeVar
 
 import numpy as np
 import torch
@@ -36,14 +36,10 @@ def _batchify(records: Iterator[T], batch_size: int) -> Iterator[list[T]]:
     pbar.close()
 
 
-def _write_data(
-    path: Path, pooled: list[torch.Tensor], means: list[torch.Tensor], records: list[dict[str, str]], shard_index: int
-) -> None:
+def _write_data(path: Path, pooled: list[torch.Tensor], records: list[dict[str, str]], shard_index: int) -> None:
     """Write out the data to disk."""
-    pooled_tensor = torch.cat(pooled, dim=0).half()
-    mean_tensor = torch.stack(means, dim=0).half()
+    pooled_tensor = torch.cat(pooled, dim=0).float()
     torch.save(pooled_tensor, path / f"pooled_{shard_index:04d}.pt")
-    torch.save(mean_tensor, path / f"mean_{shard_index:04d}.pt")
     with open(path / f"texts_{shard_index:04d}.txt", "w", encoding="utf-8") as f:
         for i, record in enumerate(records):
             line = json.dumps({"text": record["truncated"], "id": record["id"], "index": i}, ensure_ascii=False)
@@ -106,7 +102,7 @@ def infer(
     path.mkdir(parents=True, exist_ok=True)
     shards_saved = 0
 
-    all_pooled, all_mean, accumulated_records = [], [], []
+    all_pooled, accumulated_records = [], []
     tokenizer: PreTrainedTokenizer = model.tokenizer
     original_max_length = model[0].max_seq_length
     assert original_max_length is not None
@@ -120,16 +116,13 @@ def infer(
 
     if prompt is not None:
         prompt = prompt.strip()
-        tokenized_prompt, text_prompt = _tokenize([prompt] if prompt is not None else [""], tokenizer, max_length=512)
-        input_ids = cast(torch.Tensor, tokenized_prompt["input_ids"]).tolist()
-        prompt_length = cast(int, len(input_ids))
+        _, text_prompt = _tokenize([prompt] if prompt is not None else [""], tokenizer, max_length=512)
         text_prompt_length = len(text_prompt[0].strip()) + 1  # +1 for the space
     else:
-        prompt_length = 0
         text_prompt_length = 0
 
     seen = 0
-    with torch.inference_mode(), torch.autocast(device_type="cuda", dtype=torch.float16):
+    with torch.inference_mode():
         for batch in _batchify(records, batch_size=batch_size):
             if prompt is None:
                 texts = [record["text"] for record in batch]
@@ -141,37 +134,22 @@ def infer(
             # One forward through the whole SentenceTransformer
             out = model(features_dict)
             pooled = out["sentence_embedding"].cpu()
-            tokens = out["token_embeddings"].cpu()
-            masks = out["attention_mask"].cpu()
 
-            for record, token_sequence, mask, truncated in zip(batch, tokens, masks, truncated_strings):
-                first_zero_index = mask.argmin() - 1
-
-                meaned = token_sequence[1 + prompt_length : first_zero_index]
-                if len(meaned) == 0:  # happens when the input is empty or only special tokens
-                    dim = model.get_sentence_embedding_dimension()
-                    assert dim is not None
-                    meaned = torch.zeros(dim, device="cpu")
-                else:
-                    meaned = meaned.mean(dim=0).cpu()
-
-                all_mean.append(meaned)
+            for record, truncated in zip(batch, truncated_strings):
                 record["truncated"] = truncated[text_prompt_length:]
 
                 accumulated_records.append(record)
             all_pooled.append(pooled.cpu())
-            del tokens
             del pooled
             torch.cuda.empty_cache()
 
             seen += 1
             if seen % save_every == 0:
                 logger.info(f"Seen {seen * batch_size} texts, saving intermediate results to disk.")
-                _write_data(path, all_pooled, all_mean, accumulated_records, shards_saved)
+                _write_data(path, all_pooled, accumulated_records, shards_saved)
                 shards_saved += 1
                 all_pooled = []
-                all_mean = []
                 accumulated_records = []
 
     if accumulated_records:
-        _write_data(path, all_pooled, all_mean, accumulated_records, shards_saved)
+        _write_data(path, all_pooled, accumulated_records, shards_saved)
