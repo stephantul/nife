@@ -126,7 +126,9 @@ if __name__ == "__main__":
     loss = CosineLoss(model=model)
 
     train_dataset, n_samples = datasets(
-        [Path(path) for path in parsed_args.train_dataset], in_memory=parsed_args.in_memory
+        [Path(path) for path in parsed_args.train_dataset],
+        in_memory=parsed_args.in_memory,
+        limit_shards=parsed_args.limit_shards,
     )
 
     # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
