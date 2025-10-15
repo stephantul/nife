@@ -26,11 +26,11 @@ def _post_process_dataset(dataset: T, to_keep: set[str]) -> T:
 def _get_shards_from_dataset(path_or_repo: Path) -> list[Path]:
     """Get all parquet shards in the given path."""
     if path_or_repo.is_dir():
-        return list(path_or_repo.glob("**/*.parquet"))
+        return list(path_or_repo.glob("train/*.parquet"))
     api = HfApi()
-    local_path = api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset", local_dir=".")
+    local_path = api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset")
     path_or_repo = Path(local_path)
-    return list(path_or_repo.glob("**/*.parquet"))
+    return list(path_or_repo.glob("train/*.parquet"))
 
 
 def get_datasets(
@@ -66,7 +66,7 @@ def get_datasets(
             datasets[path.stem] = dataset
         return DatasetDict(datasets), length
 
-    all_shards = []
+    all_shards: list[Path] = []
     for path in paths:
         shards_in_path = _get_shards_from_dataset(path)
         if limit_shards is not None:
@@ -75,7 +75,8 @@ def get_datasets(
     for shard in all_shards:
         length += pq.read_metadata(shard).num_rows
     random.shuffle(all_shards)
-    dataset = cast(IterableDataset, load_dataset("parquet", data_files=all_shards, split="train", streaming=True))
+    all_shards_as_posix = [path.as_posix() for path in all_shards]
+    dataset = cast(IterableDataset, load_dataset("parquet", data_files=all_shards_as_posix, streaming=True))
     dataset = _post_process_dataset(dataset, to_keep=columns_to_keep)
 
     return dataset, length
