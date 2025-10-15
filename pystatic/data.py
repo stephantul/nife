@@ -76,7 +76,9 @@ def get_datasets(
         length += pq.read_metadata(shard).num_rows
     random.shuffle(all_shards)
     all_shards_as_posix = [path.as_posix() for path in all_shards]
-    dataset = cast(IterableDataset, load_dataset("parquet", data_files=all_shards_as_posix, streaming=True))
+    dataset = cast(
+        IterableDataset, load_dataset("parquet", data_files=all_shards_as_posix, split="train", streaming=True)
+    )
     dataset = _post_process_dataset(dataset, to_keep=columns_to_keep)
 
     return dataset, length
