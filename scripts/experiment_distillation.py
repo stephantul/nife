@@ -1,13 +1,11 @@
 import argparse
 import logging
 import random
-from collections.abc import Sequence
 from pathlib import Path
-from typing import TypeVar, cast
+from typing import cast
 
-import pyarrow.parquet as pq
 import torch
-from datasets import Dataset, DatasetDict, IterableDataset, load_dataset
+from datasets import Dataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -18,6 +16,7 @@ from sentence_transformers.similarity_functions import SimilarityFunction
 from skeletoken import TokenizerModel
 
 import wandb
+from pystatic.data import get_datasets
 from pystatic.embedding import TrainableStaticEmbedding
 from pystatic.losses import CosineLoss
 
@@ -26,49 +25,6 @@ logger = logging.getLogger(__name__)
 random.seed(12)
 
 logger = logging.getLogger(__name__)
-
-
-T = TypeVar("T", Dataset, IterableDataset)
-
-
-def _post_process_dataset(dataset: T) -> T:
-    """Post-process the dataset."""
-    dataset = dataset.rename_column("text", "sentence")
-    dataset = dataset.rename_column("embedding", "label")
-    column_names = dataset.column_names
-    assert column_names is not None
-    columns_to_drop = [c for c in column_names if c not in ("sentence", "label")]
-    dataset = dataset.remove_columns(columns_to_drop)
-    return dataset
-
-
-def datasets(
-    paths: Sequence[Path], in_memory: bool = True, limit_shards: int | None = None
-) -> tuple[IterableDataset | DatasetDict, int]:
-    """Load the datasets."""
-    length = 0
-    if in_memory:
-        datasets = {}
-        for path in paths:
-            dataset = cast(Dataset, load_dataset(path=str(path), split="train"))
-            length += len(dataset)
-            dataset = _post_process_dataset(dataset)
-            datasets[path.stem] = dataset
-        return DatasetDict(datasets), length
-
-    all_shards = []
-    for path in paths:
-        shards_in_path = [str(x) for x in Path(path).glob("**/*.parquet")]
-        if limit_shards is not None:
-            shards_in_path = shards_in_path[:limit_shards]
-        all_shards.extend(shards_in_path)
-    for shard in all_shards:
-        length += pq.read_metadata(shard).num_rows
-    random.shuffle(all_shards)
-    dataset = cast(IterableDataset, load_dataset("parquet", data_files=all_shards, split="train", streaming=True))
-    dataset = _post_process_dataset(dataset)
-
-    return dataset, length
 
 
 def _parse_args() -> argparse.Namespace:
@@ -125,10 +81,11 @@ if __name__ == "__main__":
 
     loss = CosineLoss(model=model)
 
-    train_dataset, n_samples = datasets(
+    train_dataset, n_samples = get_datasets(
         [Path(path) for path in parsed_args.train_dataset],
         in_memory=parsed_args.in_memory,
         limit_shards=parsed_args.limit_shards,
+        columns_to_keep={"sentence", "label"},
     )
 
     # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
@@ -151,9 +108,6 @@ if __name__ == "__main__":
         learning_rate=parsed_args.learning_rate,
         lr_scheduler_type="linear",
         warmup_ratio=0.0,
-        fp16=False,  # Set to False if you get an error that your GPU can't run on FP16
-        bf16=False,  # Set to True if you have a GPU that supports BF16
-        # Optional tracking/debugging parameters:
         eval_strategy="steps",
         eval_steps=eval_step,
         save_strategy="steps",
@@ -162,7 +116,6 @@ if __name__ == "__main__":
         logging_steps=logging_step,
         logging_first_step=True,
         run_name=name,
-        use_cpu=False,
         report_to=["wandb"],
         weight_decay=0.0,
         load_best_model_at_end=False,
