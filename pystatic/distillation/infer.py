@@ -123,7 +123,7 @@ def infer(
         text_prompt_length = 0
 
     seen = 0
-    with torch.inference_mode():
+    with torch.inference_mode(), torch.autocast(device_type=model.device.type, dtype=torch.bfloat16):
         for batch in _batchify(records, batch_size=batch_size):
             if prompt is None:
                 texts = [record["text"] for record in batch]
