@@ -76,15 +76,13 @@ def infer(
     limit_batches: int | None = None,
 ) -> None:
     """
-    Infer embeddings for a list of texts using a SentenceTransformer model.
+    Infer embeddings for a stream of texts using a SentenceTransformer model.
 
     This is mainly used as an inner loop for the knowledge distillation process.
-    We sample N texts from the corpus, and infer embeddings for them using
-    the teacher model. These embeddings are then used to train the student model.
+    We get N texts, and infer embeddings for them using the teacher model.
+    These embeddings are then used to train the student model.
 
-    We return both the pooled output (CLS token) and the mean-pooled output
-    (mean of all token embeddings) for each text. This allows models to train on
-    either objective, or switch between them as a form of regularization.
+    We return the pooled output for each text.
 
     Args:
     ----
