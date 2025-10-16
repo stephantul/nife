@@ -34,4 +34,5 @@ if __name__ == "__main__":
         name=f"output/msmarco_ml{max_length}{suffix}",
         save_every=256,
         max_length=max_length,
+        limit_batches=args.limit_batches,
     )

@@ -54,4 +54,5 @@ if __name__ == "__main__":
             save_every=256,
             max_length=max_length,
             prompt=prompt,
+            limit_batches=args.limit_batches,
         )

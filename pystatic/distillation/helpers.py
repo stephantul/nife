@@ -19,6 +19,7 @@ def parse_inference_args() -> Namespace:
         help="Name of the prompt to use for inference. If this is None, no prompt is used.",
     )
     parser.add_argument("--max-length", type=int, default=512, help="Max length for inference.")
+    parser.add_argument("--limit-batches", type=int, help="Limit the number of batches to process.")
 
     return parser.parse_args()
 

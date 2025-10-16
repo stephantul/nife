@@ -73,6 +73,7 @@ def infer(
     max_length: int = 512,
     save_every: int = 8192,
     prompt: str | None = None,
+    limit_batches: int | None = None,
 ) -> None:
     """
     Infer embeddings for a list of texts using a SentenceTransformer model.
@@ -94,6 +95,7 @@ def infer(
         save_every: Save intermediate results every N batches. Defaults to 8192.
         name: The name of the directory to save the results to.
         prompt: An optional prompt to prepend to each text before encoding.
+        limit_batches: An optional limit on the number of batches to process.
 
     """
     model.eval()
@@ -150,6 +152,10 @@ def infer(
                 shards_saved += 1
                 all_pooled = []
                 accumulated_records = []
+
+            if limit_batches is not None and seen >= limit_batches:
+                logger.info(f"Reached limit of {limit_batches} batches, stopping inference.")
+                break
 
     if accumulated_records:
         _write_data(path, all_pooled, accumulated_records, shards_saved)
