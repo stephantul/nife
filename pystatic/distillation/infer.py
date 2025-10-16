@@ -48,6 +48,7 @@ def _write_data(path: Path, pooled: list[torch.Tensor], records: list[dict[str, 
 
 def _tokenize(strings: list[str], tokenizer: PreTrainedTokenizer, max_length: int) -> tuple[BatchEncoding, list[str]]:
     """Tokenize a list of strings using a HuggingFace tokenizer."""
+    strings = [x.strip()[:10000] for x in strings]  # Hard limit to 10k chars
     tokenized = tokenizer(
         strings,
         padding=True,
