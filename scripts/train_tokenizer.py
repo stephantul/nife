@@ -1,7 +1,7 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 
-from datasets import IterableDataset, concatenate_datasets
+from datasets import IterableDataset
 from skeletoken import TokenizerModel
 from tokenizers import Tokenizer
 from tokenizers.models import BPE
@@ -27,6 +27,7 @@ def _parse_args() -> Namespace:
     )
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
     parser.add_argument("--limit-shards", type=int, help="Limit the number of shards.")
+    parser.add_argument("--vocab-size", type=int, default=30_000, help="Vocabulary size for the tokenizer.")
 
     return parser.parse_args()
 
@@ -50,18 +51,16 @@ if __name__ == "__main__":
     tokenizer.pre_tokenizer = PreTokenizerSequence([Metaspace(split=True), BertPreTokenizer()])  # type: ignore
 
     trainer = BpeTrainer(
-        vocab_size=400_000,
+        vocab_size=parsed_args.vocab_size,
         special_tokens=["[UNK]", "[PAD]"],
         continuing_subword_prefix="",
         end_of_word_suffix="",
         max_token_length=16,
     )
-
     if isinstance(data, IterableDataset):
         sentences = (x["sentence"] for x in data)
     else:
-        concatenated = concatenate_datasets([data[k] for k in data])
-        sentences = concatenated["sentence"]
+        sentences = data["sentence"]
 
     tokenizer.train_from_iterator(sentences, trainer=trainer)
     tokenizer.model.dropout = 0.0
