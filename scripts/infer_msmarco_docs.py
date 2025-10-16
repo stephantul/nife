@@ -21,8 +21,17 @@ if __name__ == "__main__":
 
     suffix = f"-{args.prompt_name}" if args.prompt_name is not None else ""
 
+    max_length = args.max_length
+
     name = "mteb/msmarco"
     dataset = cast(Dataset, load_dataset(name, "corpus", split="corpus", streaming=True))
     dataset = dataset.rename_column("_id", "id")
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
-    infer(model, dataset_iterator, batch_size=512, name=f"output/msmarco{suffix}", save_every=256)
+    infer(
+        model,
+        dataset_iterator,
+        batch_size=512,
+        name=f"output/msmarco_ml{max_length}{suffix}",
+        save_every=256,
+        max_length=max_length,
+    )

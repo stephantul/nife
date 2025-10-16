@@ -1,36 +1,37 @@
-import random
 from pathlib import Path
-from typing import Sequence, TypeVar, cast
+from typing import Sequence, cast
 
 import pyarrow.parquet as pq
-from datasets import Dataset, DatasetDict, IterableDataset, load_dataset
+from datasets import Dataset, IterableDataset, load_dataset
 from huggingface_hub import HfApi
 
-T = TypeVar("T", Dataset, IterableDataset)
 
-
-def _post_process_dataset(dataset: T, to_keep: set[str]) -> T:
-    """Post-process the dataset."""
-    # No need to rename if the columns are not in the dataset.
-    if "sentence" in to_keep:
+def _post_process_dataset(dataset: Dataset | IterableDataset, to_keep: set[str]) -> Dataset | IterableDataset:
+    # Rename only if the source exists and the target is kept.
+    assert dataset.column_names is not None
+    cols = set(dataset.column_names)
+    if "text" in cols and "sentence" in to_keep:
         dataset = dataset.rename_column("text", "sentence")
-    if "label" in to_keep:
+    if "embedding" in cols and "label" in to_keep:
         dataset = dataset.rename_column("embedding", "label")
-    column_names = dataset.column_names
-    assert column_names is not None
-    columns_to_drop = [c for c in column_names if c not in to_keep]
-    dataset = dataset.remove_columns(columns_to_drop)
+
+    assert dataset.column_names is not None
+    cols = set(dataset.column_names)
+    dataset = dataset.remove_columns([c for c in cols if c not in to_keep])
+
     return dataset
 
 
-def _get_shards_from_dataset(path_or_repo: Path) -> list[Path]:
-    """Get all parquet shards in the given path."""
+def _collect_parquet_shards(path_or_repo: Path) -> list[Path]:
+    """Return a sorted list of train/*.parquet for local dir or HF dataset repo."""
     if path_or_repo.is_dir():
-        return list(path_or_repo.glob("train/*.parquet"))
-    api = HfApi()
-    local_path = api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset")
-    path_or_repo = Path(local_path)
-    return list(path_or_repo.glob("train/*.parquet"))
+        shards = list(path_or_repo.glob("train/*.parquet"))
+    else:
+        api = HfApi()
+        local = Path(api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset"))
+        shards = list(local.glob("train/*.parquet"))
+    shards.sort(key=lambda p: p.as_posix())
+    return shards
 
 
 def get_datasets(
@@ -38,7 +39,7 @@ def get_datasets(
     in_memory: bool = True,
     limit_shards: int | None = None,
     columns_to_keep: set[str] = {"sentence", "label"},
-) -> tuple[IterableDataset | DatasetDict, int]:
+) -> tuple[Dataset | IterableDataset, int]:
     """
     Gets datasets from the given paths.
 
@@ -56,29 +57,25 @@ def get_datasets(
     columns_to_keep (set[str]): Columns to keep in the dataset.
 
     """
-    length = 0
-    if in_memory:
-        datasets = {}
-        for path in paths:
-            dataset = cast(Dataset, load_dataset(path=str(path), split="train"))
-            length += len(dataset)
-            dataset = _post_process_dataset(dataset, to_keep=columns_to_keep)
-            datasets[path.stem] = dataset
-        return DatasetDict(datasets), length
-
-    all_shards: list[Path] = []
+    shards: list[Path] = []
     for path in paths:
-        shards_in_path = _get_shards_from_dataset(path)
+        ps = _collect_parquet_shards(path)
         if limit_shards is not None:
-            shards_in_path = shards_in_path[:limit_shards]
-        all_shards.extend(shards_in_path)
-    for shard in all_shards:
-        length += pq.read_metadata(shard).num_rows
-    random.shuffle(all_shards)
-    all_shards_as_posix = [path.as_posix() for path in all_shards]
-    dataset = cast(
-        IterableDataset, load_dataset("parquet", data_files=all_shards_as_posix, split="train", streaming=True)
-    )
-    dataset = _post_process_dataset(dataset, to_keep=columns_to_keep)
+            ps = ps[:limit_shards]
+        shards.extend(ps)
 
+    length = sum(pq.read_metadata(p).num_rows for p in shards)
+
+    data_files = [p.as_posix() for p in shards]
+    ds = cast(
+        Dataset | IterableDataset,
+        load_dataset(
+            "parquet",
+            data_files=data_files,
+            split="train",
+            streaming=not in_memory,  # the only difference
+        ),
+    )
+
+    dataset = _post_process_dataset(ds, to_keep=columns_to_keep)
     return dataset, length
