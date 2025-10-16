@@ -1,11 +1,13 @@
 """Script with some hardcoded stuff for ease of use."""
 
 import logging
+import shutil
 from typing import Iterator, cast
 
 from datasets import Dataset, load_dataset
 from sentence_transformers import SentenceTransformer
 
+from pystatic.data import build_parquet_shards_from_folder
 from pystatic.distillation.helpers import get_prompt_from_model, parse_inference_args
 from pystatic.distillation.infer import infer
 
@@ -27,12 +29,22 @@ if __name__ == "__main__":
     dataset = cast(Dataset, load_dataset(name, "corpus", split="corpus", streaming=True))
     dataset = dataset.rename_column("_id", "id")
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
+
+    folder_name = f"output/msmarco_{max_length}_{model_name}_{suffix}"
+    converted_folder_name = f"converted/msmarco_{max_length}_{model_name}_{suffix}"
+
     infer(
         model,
         dataset_iterator,
         batch_size=512,
-        name=f"output/msmarco_ml{max_length}{suffix}",
+        name=folder_name,
         save_every=256,
         max_length=max_length,
         limit_batches=args.limit_batches,
     )
+
+    logger.info("Converting dataset to shards...")
+    build_parquet_shards_from_folder(folder_name, converted_folder_name)
+    logger.info(f"Converted dataset saved to {converted_folder_name}")
+    shutil.rmtree(folder_name)
+    logger.info(f"Removed temporary folder {folder_name}")
