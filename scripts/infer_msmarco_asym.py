@@ -27,7 +27,7 @@ if __name__ == "__main__":
 
     name = "sentence-transformers/msmarco-bm25"
     dataset = cast(Dataset, load_dataset(name, "triplet", split="train", streaming=True))
-    dataset = dataset.add_column("id", list(map(str, range(len(dataset)))), new_fingerprint="id")
+    # dataset = dataset.add_column("id", list(map(str, range(len(dataset)))), new_fingerprint="id")
     dataset = dataset.remove_columns("negative")
     dataset = dataset.rename_column("positive", "text")
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
