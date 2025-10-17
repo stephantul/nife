@@ -42,7 +42,12 @@ def _write_data(path: Path, pooled: list[torch.Tensor], records: list[dict[str, 
     torch.save(pooled_tensor, path / f"pooled_{shard_index:04d}.pt")
     with open(path / f"texts_{shard_index:04d}.txt", "w", encoding="utf-8") as f:
         for i, record in enumerate(records):
-            line = json.dumps({"text": record["truncated"], "id": record["id"], "index": i}, ensure_ascii=False)
+            other_keys = {k for k in record if k not in {"text", "id", "index"}}
+            dict_without_other_keys = {k: v for k, v in record.items() if k in other_keys}
+            line = json.dumps(
+                {"text": record["truncated"], "id": record["id"], "index": i, **dict_without_other_keys},
+                ensure_ascii=False,
+            )
             f.write(line + "\n")
 
 
