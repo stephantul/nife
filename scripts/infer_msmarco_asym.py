@@ -26,7 +26,7 @@ if __name__ == "__main__":
     max_length = args.max_length
 
     name = "sentence-transformers/msmarco-bm25"
-    dataset = cast(Dataset, load_dataset(name, "triplet", split="corpus", streaming=True))
+    dataset = cast(Dataset, load_dataset(name, "triplet", split="train", streaming=True))
     dataset = dataset.add_column("id", list(map(str, range(len(dataset)))), new_fingerprint="id")
     dataset = dataset.remove_columns("negative")
     dataset = dataset.rename_column("positive", "text")
