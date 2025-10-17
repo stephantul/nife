@@ -3,9 +3,9 @@
 import logging
 from typing import Iterator, cast
 
+from datasets import Dataset, concatenate_datasets, load_dataset
 from sentence_transformers import SentenceTransformer
 
-from datasets import Dataset, concatenate_datasets, load_dataset
 from pystatic.distillation.helpers import get_prompt_from_model, parse_inference_args
 from pystatic.distillation.infer import infer
 
