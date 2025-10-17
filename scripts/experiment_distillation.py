@@ -48,6 +48,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-shards", type=int, help="Limit the number of shards.")
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
     parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
+    parser.add_argument("--initialize-from-weights", type=str, help="Path to weights to initialize from.")
     return parser.parse_args()
 
 
@@ -57,7 +58,16 @@ if __name__ == "__main__":
 
     tokenizer = TokenizerModel.from_pretrained(parsed_args.tokenizer_path).to_transformers()
     model_to_initialize_from = parsed_args.initialize_from_model
-    if model_to_initialize_from is not None:
+    weights_to_initialize_from = parsed_args.initialize_from_weights
+    if model_to_initialize_from and weights_to_initialize_from:
+        raise ValueError("Cannot specify both --initialize-from-model and --initialize-from-weights.")
+
+    # Todo: consolidate into helper functions (initializaton)
+    if weights_to_initialize_from is not None:
+        logger.info(f"Initializing from weights {weights_to_initialize_from}")
+        model = SentenceTransformer(weights_to_initialize_from)
+
+    elif model_to_initialize_from is not None:
         logger.info(f"Initializing from model {model_to_initialize_from}")
         model = SentenceTransformer(model_to_initialize_from)
         v, _ = zip(*sorted(tokenizer.get_vocab().items(), key=lambda x: x[1]))
@@ -68,9 +78,10 @@ if __name__ == "__main__":
             tokenizer=tokenizer,
             embedding_weights=weights.cpu().numpy(),
         )
+        model = SentenceTransformer(modules=[s])
     else:
         s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
-    model = SentenceTransformer(modules=[s])
+        model = SentenceTransformer(modules=[s])
 
     stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
     stsb_test_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="test"))
