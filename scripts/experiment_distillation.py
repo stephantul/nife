@@ -47,6 +47,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--limit-shards", type=int, help="Limit the number of shards.")
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
+    parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
     return parser.parse_args()
 
 
@@ -55,7 +56,20 @@ if __name__ == "__main__":
     model_dim = parsed_args.model_dim
 
     tokenizer = TokenizerModel.from_pretrained(parsed_args.tokenizer_path).to_transformers()
-    s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
+    model_to_initialize_from = parsed_args.initialize_from_model
+    if model_to_initialize_from is not None:
+        logger.info(f"Initializing from model {model_to_initialize_from}")
+        model = SentenceTransformer(model_to_initialize_from)
+        v, _ = zip(*sorted(tokenizer.get_vocab().items(), key=lambda x: x[1]))
+        vocab: list[str] = list(v)
+        weights = model.encode(vocab, batch_size=2048, convert_to_numpy=False, convert_to_tensor=True)
+        model_dim = weights.shape[1]
+        s = TrainableStaticEmbedding(
+            tokenizer=tokenizer,
+            embedding_weights=weights.cpu().numpy(),
+        )
+    else:
+        s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
     model = SentenceTransformer(modules=[s])
 
     stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
@@ -110,9 +124,7 @@ if __name__ == "__main__":
         warmup_ratio=0.0,
         eval_strategy="steps",
         eval_steps=eval_step,
-        save_strategy="steps",
-        save_steps=save_step,
-        save_total_limit=2,
+        save_strategy="no",
         logging_steps=logging_step,
         logging_first_step=True,
         run_name=name,
