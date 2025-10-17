@@ -2,22 +2,20 @@ import argparse
 import logging
 import random
 from pathlib import Path
-from typing import cast
 
+import numpy as np
 import torch
-from datasets import Dataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
     SentenceTransformerTrainingArguments,
 )
-from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator
-from sentence_transformers.similarity_functions import SimilarityFunction
 from skeletoken import TokenizerModel
 
 import wandb
 from pystatic.data import get_datasets
 from pystatic.embedding import TrainableStaticEmbedding
+from pystatic.evaluator import PrecomputedCosineEvaluator
 from pystatic.losses import CosineLoss
 
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
@@ -83,17 +81,6 @@ if __name__ == "__main__":
         s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
         model = SentenceTransformer(modules=[s])
 
-    stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
-    stsb_test_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="test"))
-
-    dev_evaluator_stsb = EmbeddingSimilarityEvaluator(
-        sentences1=stsb_eval_dataset["sentence1"],
-        sentences2=stsb_eval_dataset["sentence2"],
-        scores=stsb_eval_dataset["score"],
-        main_similarity=SimilarityFunction.COSINE,
-        name="sts-dev",
-    )
-
     # Workaround for local development
     n_workers = 7
     prefetch_factor: int | None = 2
@@ -111,6 +98,15 @@ if __name__ == "__main__":
         in_memory=parsed_args.in_memory,
         limit_shards=parsed_args.limit_shards,
         columns_to_keep={"sentence", "label"},
+    )
+
+    # Get 10k samples from the train set
+    validation_dataset = train_dataset.take(10000)
+    train_dataset = train_dataset.skip(10000)
+
+    evaluator = PrecomputedCosineEvaluator(
+        sentences=validation_dataset["sentence"],
+        target_embeddings=np.stack(validation_dataset["label"]),  # type: ignore
     )
 
     # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
@@ -135,15 +131,17 @@ if __name__ == "__main__":
         warmup_ratio=0.0,
         eval_strategy="steps",
         eval_steps=eval_step,
-        save_strategy="no",
+        save_strategy="steps",
+        save_steps=save_step,
+        save_total_limit=1,
         logging_steps=logging_step,
         logging_first_step=True,
         run_name=name,
         report_to=["wandb"],
         weight_decay=0.0,
-        load_best_model_at_end=False,
-        greater_is_better=True,
-        metric_for_best_model="sts-dev_spearman_cosine",
+        load_best_model_at_end=True,
+        greater_is_better=False,
+        metric_for_best_model="dev_cosine_mean",
         dataloader_num_workers=n_workers,
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
@@ -154,9 +152,8 @@ if __name__ == "__main__":
         args=args,
         train_dataset=train_dataset,
         loss=loss,
-        evaluator=dev_evaluator_stsb,
+        evaluator=evaluator,
     )
     trainer.train()
 
-    dev_evaluator_stsb(model)
     model.save_pretrained(f"models/{name}/final")

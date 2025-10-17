@@ -180,9 +180,16 @@ def get_datasets(
             "parquet",
             data_files=data_files,
             split="train",
-            streaming=not in_memory,  # the only difference
+            streaming=not in_memory,
         ),
     )
+
+    if not in_memory:
+        ds = cast(IterableDataset, ds)
+        ds = ds.shuffle(buffer_size=50_000, seed=42)
+    else:
+        ds = cast(Dataset, ds)
+        ds = ds.shuffle(seed=42)
 
     dataset = _post_process_dataset(ds, to_keep=columns_to_keep)
     return dataset, length
