@@ -27,8 +27,8 @@ if __name__ == "__main__":
     folder_name = f"output/msmarco_vocab_{model_name_str}_{suffix}"
     converted_folder_name = f"converted/msmarco_vocab_{model_name_str}_{suffix}"
     dataset = cast(Dataset, load_dataset("stephantulkens/msmarco-vocab", split="train"))
-    dataset.rename_column("token", "text")
-    dataset.add_column("id", [str(i) for i in range(len(dataset))], new_fingerprint="id")
+    dataset = dataset.rename_column("token", "text")
+    dataset = dataset.add_column("id", [str(i) for i in range(len(dataset))], new_fingerprint="id")
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
     infer(model, dataset_iterator, batch_size=512, name=folder_name, save_every=16384)
 
