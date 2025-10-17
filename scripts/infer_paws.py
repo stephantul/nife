@@ -27,7 +27,7 @@ if __name__ == "__main__":
     folder_name = f"output/paws_{model_name.replace('/', '__')}{suffix}"
     converted_folder_name = f"converted/paws_{model_name.replace('/', '__')}{suffix}"
 
-    dataset = load_dataset(name, "labeled_final", split="train")
+    dataset = load_dataset(name, "unlabeled_final", split="train")
 
     new_records = []
     for i, record in enumerate(dataset):
