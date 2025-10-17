@@ -2,7 +2,8 @@
 
 import logging
 import shutil
-from typing import Iterator, cast
+from collections.abc import Iterable, Iterator
+from typing import cast
 
 from datasets import Dataset, load_dataset
 from sentence_transformers import SentenceTransformer
@@ -23,27 +24,25 @@ if __name__ == "__main__":
 
     suffix = f"-{args.prompt_name}" if args.prompt_name is not None else ""
 
-    max_length = args.max_length
+    name = "sentence-transformers/gooaq"
+    folder_name = f"output/gooaq_asym_{model_name.replace('/', '__')}{suffix}"
+    converted_folder_name = f"converted/gooaq_asym_{model_name.replace('/', '__')}{suffix}"
 
-    name = "sentence-transformers/msmarco-bm25"
-    dataset = cast(Dataset, load_dataset(name, "triplet", split="train", streaming=True))
-    # dataset = dataset.add_column("id", list(map(str, range(len(dataset)))), new_fingerprint="id")
-    dataset = dataset.remove_columns("negative")
-    dataset = dataset.rename_column("positive", "text")
-    dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
+    dataset = cast(Dataset, load_dataset(name, split="train"))
 
-    model_name_str = model_name.replace("/", "__")
+    new_records: list[dict[str, str]] = []
+    for record in cast(Iterable[dict[str, str]], dataset):
+        text = record["question"]
+        new_records.append({"id": str(len(new_records)), "text": text})
 
-    folder_name = f"output/msmarco_asym_{max_length}_{model_name_str}_{suffix}"
-    converted_folder_name = f"converted/msmarco_asym_{max_length}_{model_name_str}_{suffix}"
-
+    dataset_iterator = cast(Iterator[dict[str, str]], iter(new_records))
     infer(
         model,
         dataset_iterator,
         batch_size=512,
         name=folder_name,
         save_every=256,
-        max_length=max_length,
+        prompt=prompt,
         limit_batches=args.limit_batches,
     )
 
