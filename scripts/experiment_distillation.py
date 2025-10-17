@@ -11,6 +11,7 @@ from sentence_transformers import (
     SentenceTransformerTrainingArguments,
 )
 from skeletoken import TokenizerModel
+from transformers.trainer_callback import EarlyStoppingCallback
 
 import wandb
 from pystatic.data import get_datasets
@@ -35,6 +36,7 @@ def _parse_args() -> argparse.Namespace:
         help="Path to the training datasets",
         nargs="+",
     )
+    parser.add_argument("--text-field", type=str, default="sentence", help="Field in the dataset to use as text.")
     parser.add_argument("--model-dim", type=int, default=1024, help="Dimensionality of the model.")
     parser.add_argument("--batch-size", type=int, default=2048, help="Batch size for training.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of epochs for training.")
@@ -97,7 +99,7 @@ if __name__ == "__main__":
         [Path(path) for path in parsed_args.train_dataset],
         in_memory=parsed_args.in_memory,
         limit_shards=parsed_args.limit_shards,
-        columns_to_keep={"sentence", "label"},
+        columns_to_keep={parsed_args.text_field, "label"},
     )
 
     # Get 10k samples from the train set
@@ -153,6 +155,7 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         loss=loss,
         evaluator=evaluator,
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)],
     )
     trainer.train()
 
