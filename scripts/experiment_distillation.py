@@ -107,7 +107,7 @@ if __name__ == "__main__":
     train_dataset = train_dataset.skip(10000)
 
     evaluator = PrecomputedCosineEvaluator(
-        sentences=validation_dataset["sentence"],
+        sentences=validation_dataset[parsed_args.text_field],  # type: ignore
         target_embeddings=np.stack(validation_dataset["label"]),  # type: ignore
     )
 
