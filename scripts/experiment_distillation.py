@@ -4,7 +4,6 @@ import random
 from pathlib import Path
 from typing import cast
 
-import numpy as np
 import torch
 from datasets import Dataset, load_dataset
 from sentence_transformers import (
@@ -20,7 +19,6 @@ from transformers.trainer_callback import EarlyStoppingCallback
 import wandb
 from pystatic.data import get_datasets
 from pystatic.embedding import TrainableStaticEmbedding
-from pystatic.evaluator import PrecomputedCosineEvaluator
 from pystatic.losses import CosineLoss
 
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
@@ -106,16 +104,7 @@ if __name__ == "__main__":
         columns_to_keep={parsed_args.text_field, "label"},
     )
 
-    # Get 10k samples from the train set
-    validation_dataset = train_dataset.take(10000)
-    train_dataset = train_dataset.skip(10000)
-
     evaluators: list[SentenceEvaluator] = []
-    prec_evaluator = PrecomputedCosineEvaluator(
-        sentences=validation_dataset[parsed_args.text_field],  # type: ignore
-        target_embeddings=np.stack(validation_dataset["label"]),  # type: ignore
-    )
-    evaluators.append(prec_evaluator)
     stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
     dev_evaluator_stsb = EmbeddingSimilarityEvaluator(
         sentences1=stsb_eval_dataset["sentence1"],
