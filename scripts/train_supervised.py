@@ -70,9 +70,9 @@ if __name__ == "__main__":
         multi_dataset_batch_sampler=MultiDatasetBatchSamplers.PROPORTIONAL,
         # Optional tracking/debugging parameters:
         eval_strategy="steps",
-        eval_steps=250,
+        eval_steps=2500,
         save_strategy="steps",
-        save_steps=250,
+        save_steps=2500,
         save_total_limit=2,
         logging_steps=25,
         logging_first_step=True,
