@@ -14,7 +14,6 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, NanoBEIREvaluator, SentenceEvaluator
 from skeletoken import TokenizerModel
-from transformers.trainer_callback import EarlyStoppingCallback
 
 import wandb
 from pystatic.data import get_datasets
@@ -147,9 +146,7 @@ if __name__ == "__main__":
         run_name=name,
         report_to=["wandb"],
         weight_decay=0.0,
-        load_best_model_at_end=True,
-        greater_is_better=True,
-        metric_for_best_model="NanoBEIR_mean_cosine_ndcg@10",
+        load_best_model_at_end=False,
         dataloader_num_workers=n_workers,
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
@@ -161,7 +158,6 @@ if __name__ == "__main__":
         train_dataset=train_dataset,
         loss=loss,
         evaluator=evaluators,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=3)],
     )
     trainer.train()
 
