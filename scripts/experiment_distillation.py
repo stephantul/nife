@@ -2,14 +2,18 @@ import argparse
 import logging
 import random
 from pathlib import Path
+from typing import cast
 
 import numpy as np
 import torch
+from datasets import Dataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
     SentenceTransformerTrainingArguments,
+    SimilarityFunction,
 )
+from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, NanoBEIREvaluator, SentenceEvaluator
 from skeletoken import TokenizerModel
 from transformers.trainer_callback import EarlyStoppingCallback
 
@@ -106,10 +110,23 @@ if __name__ == "__main__":
     validation_dataset = train_dataset.take(10000)
     train_dataset = train_dataset.skip(10000)
 
-    evaluator = PrecomputedCosineEvaluator(
+    evaluators: list[SentenceEvaluator] = []
+    prec_evaluator = PrecomputedCosineEvaluator(
         sentences=validation_dataset[parsed_args.text_field],  # type: ignore
         target_embeddings=np.stack(validation_dataset["label"]),  # type: ignore
     )
+    evaluators.append(prec_evaluator)
+    stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
+    dev_evaluator_stsb = EmbeddingSimilarityEvaluator(
+        sentences1=stsb_eval_dataset["sentence1"],
+        sentences2=stsb_eval_dataset["sentence2"],
+        scores=stsb_eval_dataset["score"],
+        main_similarity=SimilarityFunction.COSINE,
+        name="sts-dev",
+    )
+    evaluators.append(dev_evaluator_stsb)
+    nanobeir_evaluator = NanoBEIREvaluator()
+    evaluators.append(nanobeir_evaluator)
 
     # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
     logging_step = 51200 // parsed_args.batch_size
@@ -142,8 +159,8 @@ if __name__ == "__main__":
         report_to=["wandb"],
         weight_decay=0.0,
         load_best_model_at_end=True,
-        greater_is_better=False,
-        metric_for_best_model="dev_cosine_mean",
+        greater_is_better=True,
+        metric_for_best_model="NanoBEIR_mean_cosine_ndcg@10",
         dataloader_num_workers=n_workers,
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
@@ -154,7 +171,7 @@ if __name__ == "__main__":
         args=args,
         train_dataset=train_dataset,
         loss=loss,
-        evaluator=evaluator,
+        evaluator=evaluators,
         callbacks=[EarlyStoppingCallback(early_stopping_patience=3)],
     )
     trainer.train()
