@@ -24,9 +24,10 @@ class TrainableStaticEmbedding(StaticEmbedding):
         )
         self.normalizer = nn.LayerNorm(self.embedding_dim)
         n_tokens = self.tokenizer.get_vocab_size()
-        w = torch.ones(n_tokens, 1)
+        w = torch.zeros(n_tokens, 1)
         self.w = torch.nn.Embedding.from_pretrained(w, freeze=False, padding_idx=0)
         self.embedding.mode = "sum"
+        self.dense = nn.Linear(self.embedding_dim, self.embedding_dim)
 
     def tokenize(self, texts: list[str], **kwargs: Any) -> dict[str, torch.Tensor]:
         """Tokenize the texts."""
@@ -38,9 +39,10 @@ class TrainableStaticEmbedding(StaticEmbedding):
 
     def forward(self, features: dict[str, torch.Tensor], **kwargs: Any) -> dict[str, torch.Tensor]:
         """Forward pass."""
-        weights = self.w(features["input_ids"]).squeeze(-1)
+        weights = torch.sigmoid(self.w(features["input_ids"]).squeeze(-1))
         x = self.embedding(features["input_ids"], per_sample_weights=weights)
         x = self.normalizer(x)
+        x = self.dense(x)
         features["sentence_embedding"] = x
         return features
 
