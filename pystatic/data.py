@@ -131,11 +131,11 @@ def _post_process_dataset(dataset: Dataset | IterableDataset, to_keep: set[str])
 def _collect_parquet_shards(path_or_repo: Path) -> list[Path]:
     """Return a sorted list of train/*.parquet for local dir or HF dataset repo."""
     if path_or_repo.is_dir():
-        shards = list(path_or_repo.glob("train/*.parquet"))
+        shards = list(path_or_repo.glob("**/*.parquet"))
     else:
         api = HfApi()
         local = Path(api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset"))
-        shards = list(local.glob("train/*.parquet"))
+        shards = list(local.glob("**/*.parquet"))
     shards.sort(key=lambda p: p.as_posix())
     return shards
 

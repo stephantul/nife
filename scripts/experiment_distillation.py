@@ -213,7 +213,7 @@ if __name__ == "__main__":
     )
     run_experiment(
         model,
-        parsed_args.experiment_name,
+        parsed_args.name,
         dataset,
         n_samples,
         parsed_args.batch_size,
