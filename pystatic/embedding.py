@@ -120,7 +120,7 @@ class TrainableStaticEmbeddingWithW(TrainableStaticEmbedding):
     def forward(self, features: dict[str, torch.Tensor], **kwargs: Any) -> dict[str, torch.Tensor]:
         """Forward pass."""
         input_ids = features["input_ids"]
-        w = self.w[input_ids]
+        w = torch.sigmoid(self.w[input_ids])
         x = self.embedding(input_ids, per_sample_weights=w)
         features["sentence_embedding"] = x
         return features
