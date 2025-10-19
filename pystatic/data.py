@@ -141,7 +141,7 @@ def _collect_parquet_shards(path_or_repo: Path) -> list[Path]:
 
 
 def get_datasets(
-    paths: Sequence[Path],
+    paths: Sequence[Path] | Sequence[str],
     in_memory: bool = True,
     limit_shards: int | None = None,
     columns_to_keep: set[str] = {"sentence", "label", "question"},
@@ -163,6 +163,7 @@ def get_datasets(
     columns_to_keep (set[str]): Columns to keep in the dataset.
 
     """
+    paths = [Path(p) for p in paths]
     shards: list[Path] = []
     for path in paths:
         ps = _collect_parquet_shards(path)

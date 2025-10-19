@@ -1,11 +1,10 @@
 import argparse
 import logging
 import random
-from pathlib import Path
 from typing import cast
 
 import torch
-from datasets import Dataset, load_dataset
+from datasets import Dataset, IterableDataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -13,18 +12,17 @@ from sentence_transformers import (
     SimilarityFunction,
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, NanoBEIREvaluator, SentenceEvaluator
+from sentence_transformers.models import Module, Normalize, Router
 from skeletoken import TokenizerModel
 
 import wandb
 from pystatic.data import get_datasets
-from pystatic.embedding import TrainableStaticEmbedding
+from pystatic.embedding import LayerNorm, TrainableStaticEmbedding, TrainableStaticEmbeddingWithW
 from pystatic.losses import CosineLoss
 
-logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
+logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.ERROR)
 logger = logging.getLogger(__name__)
 random.seed(12)
-
-logger = logging.getLogger(__name__)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -49,41 +47,72 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-shards", type=int, help="Limit the number of shards.")
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
     parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
-    parser.add_argument("--initialize-from-weights", type=str, help="Path to weights to initialize from.")
+    parser.add_argument("--with-norm", action="store_true", help="Add layer normalization after the embeddings.")
+    parser.add_argument("--with-weights", action="store_true", help="Use per-token weights in the embedding layer.")
     return parser.parse_args()
 
 
-if __name__ == "__main__":
-    parsed_args = _parse_args()
-    model_dim = parsed_args.model_dim
+def initialize_model(
+    tokenizer_path: str, model_to_initialize_from: str | None, model_dim: int, with_norm: bool, with_weights: bool
+) -> SentenceTransformer:
+    """Initialize the model."""
+    tokenizer = TokenizerModel.from_pretrained(tokenizer_path).to_transformers()
 
-    tokenizer = TokenizerModel.from_pretrained(parsed_args.tokenizer_path).to_transformers()
-    model_to_initialize_from = parsed_args.initialize_from_model
-    weights_to_initialize_from = parsed_args.initialize_from_weights
-    if model_to_initialize_from and weights_to_initialize_from:
-        raise ValueError("Cannot specify both --initialize-from-model and --initialize-from-weights.")
+    modules: list[Module] = []
 
-    # Todo: consolidate into helper functions (initializaton)
-    if weights_to_initialize_from is not None:
-        logger.info(f"Initializing from weights {weights_to_initialize_from}")
-        model = SentenceTransformer(weights_to_initialize_from)
+    cls: type[TrainableStaticEmbedding] | type[TrainableStaticEmbeddingWithW]
+    if with_weights:
+        cls = TrainableStaticEmbeddingWithW
+    else:
+        cls = TrainableStaticEmbedding
 
-    elif model_to_initialize_from is not None:
+    if model_to_initialize_from:
         logger.info(f"Initializing from model {model_to_initialize_from}")
         model = SentenceTransformer(model_to_initialize_from)
         v, _ = zip(*sorted(tokenizer.get_vocab().items(), key=lambda x: x[1]))
         vocab: list[str] = list(v)
         weights = model.encode(vocab, batch_size=2048, convert_to_numpy=False, convert_to_tensor=True)
         model_dim = weights.shape[1]
-        s = TrainableStaticEmbedding(
+        s = cls(
             tokenizer=tokenizer,
             embedding_weights=weights.cpu().numpy(),
         )
-        model = SentenceTransformer(modules=[s])
+        modules.append(s)
     else:
-        s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
-        model = SentenceTransformer(modules=[s])
+        s = cls(tokenizer=tokenizer, embedding_dim=model_dim)
+        modules.append(s)
+    if with_norm:
+        modules.append(LayerNorm(dim=model_dim))
+    modules.append(Normalize())
 
+    model = SentenceTransformer(modules=modules)
+
+    return model
+
+
+def load_data(
+    train_datasets: list[str], in_memory: bool, limit_shards: int | None
+) -> tuple[Dataset | IterableDataset, int]:
+    """Get the training data."""
+    datasets, n_samples = get_datasets(
+        paths=train_datasets,
+        in_memory=in_memory,
+        limit_shards=limit_shards,
+    )
+    logger.info(f"Number of training samples: {n_samples}")
+    return datasets, n_samples
+
+
+def run_experiment(
+    model: SentenceTransformer,
+    name: str,
+    dataset: Dataset | IterableDataset,
+    n_samples: int,
+    batch_size: int,
+    learning_rate: float,
+    epochs: int,
+) -> None:
+    """Run the distillation experiment."""
     # Workaround for local development
     n_workers = 7
     prefetch_factor: int | None = 2
@@ -91,17 +120,9 @@ if __name__ == "__main__":
         n_workers = 0
         prefetch_factor = None
 
-    name = parsed_args.name
     logger.info(f"Starting experiment: {name}")
 
     loss = CosineLoss(model=model)
-
-    train_dataset, n_samples = get_datasets(
-        [Path(path) for path in parsed_args.train_dataset],
-        in_memory=parsed_args.in_memory,
-        limit_shards=parsed_args.limit_shards,
-        columns_to_keep={parsed_args.text_field, "label"},
-    )
 
     evaluators: list[SentenceEvaluator] = []
     stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
@@ -117,13 +138,13 @@ if __name__ == "__main__":
     evaluators.append(nanobeir_evaluator)
 
     # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
-    logging_step = 51200 // parsed_args.batch_size
+    logging_step = 51200 // batch_size
     # Evaluate and save every 4 times the logging step
     eval_step = save_step = 4 * logging_step
 
     # Number of steps per epoch
-    n_steps = n_samples // parsed_args.batch_size
-    total_steps = parsed_args.total_steps or (n_steps * parsed_args.epochs)
+    n_steps = n_samples // batch_size
+    total_steps = n_steps * epochs
 
     wandb.init(project="distillation", name=name)
     args = SentenceTransformerTrainingArguments(
@@ -131,9 +152,9 @@ if __name__ == "__main__":
         output_dir=f"models/{name}",
         # Optional training parameters:
         max_steps=total_steps,
-        per_device_train_batch_size=parsed_args.batch_size,
-        per_device_eval_batch_size=parsed_args.batch_size,
-        learning_rate=parsed_args.learning_rate,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        learning_rate=learning_rate,
         lr_scheduler_type="linear",
         warmup_ratio=0.0,
         eval_strategy="steps",
@@ -155,10 +176,47 @@ if __name__ == "__main__":
     trainer = SentenceTransformerTrainer(
         model=model,
         args=args,
-        train_dataset=train_dataset,
+        train_dataset=dataset,
         loss=loss,
         evaluator=evaluators,
     )
     trainer.train()
 
     model.save_pretrained(f"models/{name}/final")
+
+    model_name = "mixedbread-ai/mxbai-embed-large-v1"
+    big_model = SentenceTransformer(model_name)
+
+    router = Router.for_query_document(query_modules=[model], document_modules=[big_model])  # type: ignore
+    s = SentenceTransformer(modules=[router])
+
+    # Evaluate the model
+    results = nanobeir_evaluator(s, output_path=f"results/nanobeir/router-{name}")
+    print(results)  # noqa: T201
+
+
+if __name__ == "__main__":
+    parsed_args = _parse_args()
+    model_dim = parsed_args.model_dim
+
+    model = initialize_model(
+        tokenizer_path=parsed_args.tokenizer_path,
+        model_to_initialize_from=parsed_args.initialize_from_model,
+        model_dim=model_dim,
+        with_norm=parsed_args.with_norm,
+        with_weights=parsed_args.with_weights,
+    )
+    dataset, n_samples = load_data(
+        train_datasets=parsed_args.train_dataset,
+        in_memory=parsed_args.in_memory,
+        limit_shards=parsed_args.limit_shards,
+    )
+    run_experiment(
+        model,
+        parsed_args.experiment_name,
+        dataset,
+        n_samples,
+        parsed_args.batch_size,
+        parsed_args.learning_rate,
+        parsed_args.epochs,
+    )
