@@ -1,6 +1,7 @@
 import argparse
 import logging
 import random
+from itertools import product
 
 from scripts.experiment_distillation import initialize_model, load_data, run_experiment
 
@@ -39,11 +40,13 @@ if __name__ == "__main__":
     model_dim = parsed_args.model_dim
 
     initialize_from_model = ["mixedbread-ai/mxbai-embed-large-v1"]
+    l2_norms = [1e-6, 1e-5, 1e-4, 1e-3]
 
-    for model_to_initialize_from in initialize_from_model:
+    for model_to_initialize_from, l2_norm in product(initialize_from_model, l2_norms):
         experiment_name_parts = [
             parsed_args.name,
             f"init_{'none' if model_to_initialize_from is None else 'from_model'}",
+            f"l2norm_{l2_norm}",
         ]
         parsed_args.experiment_name = "_".join(experiment_name_parts)
 
@@ -67,4 +70,5 @@ if __name__ == "__main__":
             parsed_args.batch_size,
             parsed_args.learning_rate,
             parsed_args.epochs,
+            l2_norm=l2_norm,
         )

@@ -58,7 +58,6 @@ def initialize_model(
     model_dim: int,
     with_norm: bool,
     with_weights: bool,
-    scale_grad_by_freq: bool = False,
 ) -> SentenceTransformer:
     """Initialize the model."""
     tokenizer = TokenizerModel.from_pretrained(tokenizer_path).to_transformers()
@@ -81,7 +80,6 @@ def initialize_model(
         s = cls(
             tokenizer=tokenizer,
             embedding_weights=weights.cpu().numpy(),
-            scale_grad_by_freq=scale_grad_by_freq,
         )
         modules.append(s)
     else:
