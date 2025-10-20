@@ -57,6 +57,18 @@ class LayerNorm(Module):
 
 
 class TrainableStaticEmbedding(StaticEmbedding):
+    def __init__(
+        self,
+        tokenizer: Tokenizer | PreTrainedTokenizerFast,
+        embedding_weights: np.ndarray | torch.Tensor | None = None,
+        embedding_dim: int | None = None,
+        scale_grad_by_freq: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        """Static embedding layer."""
+        super().__init__(tokenizer, embedding_weights, embedding_dim, **kwargs)
+        self.embedding.scale_grad_by_freq = scale_grad_by_freq
+
     def tokenize(self, texts: list[str], **kwargs: Any) -> dict[str, torch.Tensor]:
         """Tokenize the texts."""
         encodings = self.tokenizer.encode_batch(texts, add_special_tokens=False)

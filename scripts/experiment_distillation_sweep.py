@@ -1,7 +1,6 @@
 import argparse
 import logging
 import random
-from itertools import product
 
 from scripts.experiment_distillation import initialize_model, load_data, run_experiment
 
@@ -39,18 +38,12 @@ if __name__ == "__main__":
     parsed_args = _parse_args()
     model_dim = parsed_args.model_dim
 
-    with_weights_choices = [True, False]
-    initialize_from_model = [None, "mixedbread-ai/mxbai-embed-large-v1"]
-    with_norm_choices = [True, False]
+    initialize_from_model = ["mixedbread-ai/mxbai-embed-large-v1"]
 
-    for with_weights, model_to_initialize_from, with_norm in product(
-        with_weights_choices, initialize_from_model, with_norm_choices
-    ):
+    for model_to_initialize_from in initialize_from_model:
         experiment_name_parts = [
             parsed_args.name,
-            f"weights_{with_weights}",
             f"init_{'none' if model_to_initialize_from is None else 'from_model'}",
-            f"norm_{with_norm}",
         ]
         parsed_args.experiment_name = "_".join(experiment_name_parts)
 
@@ -58,8 +51,8 @@ if __name__ == "__main__":
             tokenizer_path=parsed_args.tokenizer_path,
             model_to_initialize_from=model_to_initialize_from,
             model_dim=model_dim,
-            with_norm=with_norm,
-            with_weights=with_weights,
+            with_norm=False,
+            with_weights=False,
         )
         dataset, n_samples = load_data(
             train_datasets=parsed_args.train_dataset,

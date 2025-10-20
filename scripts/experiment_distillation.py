@@ -53,7 +53,12 @@ def _parse_args() -> argparse.Namespace:
 
 
 def initialize_model(
-    tokenizer_path: str, model_to_initialize_from: str | None, model_dim: int, with_norm: bool, with_weights: bool
+    tokenizer_path: str,
+    model_to_initialize_from: str | None,
+    model_dim: int,
+    with_norm: bool,
+    with_weights: bool,
+    scale_grad_by_freq: bool = False,
 ) -> SentenceTransformer:
     """Initialize the model."""
     tokenizer = TokenizerModel.from_pretrained(tokenizer_path).to_transformers()
@@ -76,6 +81,7 @@ def initialize_model(
         s = cls(
             tokenizer=tokenizer,
             embedding_weights=weights.cpu().numpy(),
+            scale_grad_by_freq=scale_grad_by_freq,
         )
         modules.append(s)
     else:
@@ -111,6 +117,7 @@ def run_experiment(
     batch_size: int,
     learning_rate: float,
     epochs: int,
+    l2_norm: float | None = None,
 ) -> None:
     """Run the distillation experiment."""
     # Workaround for local development
@@ -122,7 +129,7 @@ def run_experiment(
 
     logger.info(f"Starting experiment: {name}")
 
-    loss = CosineLoss(model=model)
+    loss = CosineLoss(model=model, l2_norm=l2_norm)
 
     evaluators: list[SentenceEvaluator] = []
     stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
@@ -193,6 +200,8 @@ def run_experiment(
     # Evaluate the model
     results = nanobeir_evaluator(s, output_path=f"results/nanobeir/router-{name}")
     print(results)  # noqa: T201
+    assert wandb.run is not None
+    wandb.run.summary["nanobeir_results"] = results
 
 
 if __name__ == "__main__":
