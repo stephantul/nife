@@ -25,5 +25,5 @@ class CosineLoss(MSELoss):
             labels = labels[:, : embeddings.shape[1]]
             loss = 1 - self.loss_fct(embeddings, labels[:, : embeddings.shape[1]]).mean()
         if self.l2_norm is not None:
-            loss += self.l2_norm * (embeddings.norm(p=2) ** 2)
+            loss += self.l2_norm * (embeddings.norm(p=2, dim=1) ** 2).mean()
         return loss

@@ -40,7 +40,7 @@ if __name__ == "__main__":
     model_dim = parsed_args.model_dim
 
     initialize_from_model = ["mixedbread-ai/mxbai-embed-large-v1"]
-    l2_norms = [1e-6, 1e-5, 1e-4, 1e-3]
+    l2_norms = [1e-4, 1e-3]
 
     for model_to_initialize_from, l2_norm in product(initialize_from_model, l2_norms):
         experiment_name_parts = [
