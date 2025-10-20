@@ -173,6 +173,8 @@ def get_datasets(
 
     length = sum(pq.read_metadata(p).num_rows for p in shards)
 
+    d = 1024
+
     data_files = [p.as_posix() for p in shards]
     ds = cast(
         Dataset | IterableDataset,
@@ -181,6 +183,9 @@ def get_datasets(
             data_files=data_files,
             split="train",
             streaming=not in_memory,
+            features=Features(
+                {"text": Value("string"), "embedding": DatasetSequenceFeature(Value("float32"), length=d)}
+            ),
         ),
     )
 
