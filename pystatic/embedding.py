@@ -62,7 +62,7 @@ class TrainableStaticEmbedding(StaticEmbedding):
         tokenizer: Tokenizer | PreTrainedTokenizerFast,
         embedding_weights: np.ndarray | torch.Tensor | None = None,
         embedding_dim: int | None = None,
-        scale_grad_by_freq: bool = True,
+        scale_grad_by_freq: bool = False,
         **kwargs: Any,
     ) -> None:
         """Static embedding layer."""
