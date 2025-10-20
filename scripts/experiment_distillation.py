@@ -238,5 +238,5 @@ if __name__ == "__main__":
         parsed_args.learning_rate,
         parsed_args.epochs,
         l2_norm=None,
-        use_matryoshka=False,
+        use_matryoshka=True,
     )
