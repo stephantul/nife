@@ -1,7 +1,5 @@
 from argparse import ArgumentParser, Namespace
 
-from sentence_transformers import SentenceTransformer
-
 
 def parse_inference_args() -> Namespace:
     """Parse command line arguments for inference script."""
@@ -22,15 +20,3 @@ def parse_inference_args() -> Namespace:
     parser.add_argument("--limit-batches", type=int, help="Limit the number of batches to process.")
 
     return parser.parse_args()
-
-
-def get_prompt_from_model(model: SentenceTransformer, prompt_name: str | None) -> str | None:
-    """Get the prompt from the model based on the prompt name."""
-    if prompt_name is None:
-        return None
-
-    prompt = model.prompts.get(prompt_name, None)
-    if prompt is None:
-        raise ValueError(f"Prompt '{prompt_name}' not found in model prompts.")
-
-    return prompt

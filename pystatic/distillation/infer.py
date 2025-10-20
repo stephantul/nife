@@ -73,11 +73,10 @@ def _tokenize(strings: list[str], tokenizer: PreTrainedTokenizer, max_length: in
 def infer(
     model: SentenceTransformer,
     records: Iterator[dict[str, str]],
-    name: str,
+    output_dir: str | Path,
     batch_size: int = 96,
     max_length: int = 512,
     save_every: int = 8192,
-    prompt: str | None = None,
     limit_batches: int | None = None,
 ) -> None:
     """
@@ -96,14 +95,13 @@ def infer(
         batch_size: The batch size to use for inference. Defaults to 96.
         max_length: The maximum sequence length for tokenization. Defaults to 512.
         save_every: Save intermediate results every N batches. Defaults to 8192.
-        name: The name of the directory to save the results to.
-        prompt: An optional prompt to prepend to each text before encoding.
+        output_dir: The name of the directory to save the results to.
         limit_batches: An optional limit on the number of batches to process.
 
     """
     model.eval()
 
-    path = Path(name)
+    path = Path(output_dir)
     path.mkdir(parents=True, exist_ok=True)
     shards_saved = 0
 
@@ -119,20 +117,10 @@ def infer(
     else:
         model[0].max_seq_length = max_length  # type: ignore[assignment]
 
-    if prompt is not None:
-        prompt = prompt.strip()
-        _, text_prompt = _tokenize([prompt] if prompt is not None else [""], tokenizer, max_length=512)
-        text_prompt_length = len(text_prompt[0].strip()) + 1  # +1 for the space
-    else:
-        text_prompt_length = 0
-
     seen = 0
     with torch.inference_mode(), torch.autocast(device_type=model.device.type, dtype=torch.bfloat16):
         for batch in _batchify(records, batch_size=batch_size):
-            if prompt is None:
-                texts = [record["text"] for record in batch]
-            else:
-                texts = [f"{prompt} {record['text']}" for record in batch]
+            texts = [record["text"] for record in batch]
             features, truncated_strings = _tokenize(texts, tokenizer, max_length)
             features_dict = {k: v.to(model.device) for k, v in features.items()}
 
@@ -141,7 +129,7 @@ def infer(
             pooled = out["sentence_embedding"].cpu()
 
             for record, truncated in zip(batch, truncated_strings):
-                record["truncated"] = truncated[text_prompt_length:]
+                record["truncated"] = truncated
 
                 accumulated_records.append(record)
             all_pooled.append(pooled.cpu())
