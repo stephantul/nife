@@ -155,8 +155,8 @@ def run_experiment(
 
     # Log every 51200 samples, this is roughly every 25 steps with batch size 2048
     logging_step = 51200 // batch_size
-    # Evaluate and save every 4 times the logging step
-    eval_step = save_step = 4 * logging_step
+    # Evaluate and save every 40 times the logging step
+    eval_step = save_step = 40 * logging_step
 
     # Number of steps per epoch
     n_steps = n_samples // batch_size
