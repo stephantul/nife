@@ -48,7 +48,7 @@ if __name__ == "__main__":
     )
     tokenizer = Tokenizer(model)
     tokenizer.normalizer = NormalizerSequence([NFD(), Lowercase(), StripAccents()])  # type: ignore
-    tokenizer.pre_tokenizer = PreTokenizerSequence([Metaspace(replacement=" ", split=True), BertPreTokenizer()])  # type: ignore
+    tokenizer.pre_tokenizer = PreTokenizerSequence([Metaspace(split=True), BertPreTokenizer()])  # type: ignore
 
     trainer = BpeTrainer(
         vocab_size=parsed_args.vocab_size,
