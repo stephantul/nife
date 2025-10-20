@@ -40,7 +40,7 @@ if __name__ == "__main__":
     model_dim = parsed_args.model_dim
 
     initialize_from_model = ["mixedbread-ai/mxbai-embed-large-v1"]
-    use_matryoshka = [True]
+    use_matryoshka = [True, False]
 
     for model_to_initialize_from, mat in product(initialize_from_model, use_matryoshka):
         experiment_name_parts = [
