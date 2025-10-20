@@ -12,8 +12,10 @@ from sentence_transformers import (
     SimilarityFunction,
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, NanoBEIREvaluator, SentenceEvaluator
+from sentence_transformers.losses import MatryoshkaLoss
 from sentence_transformers.models import Module, Normalize, Router
 from skeletoken import TokenizerModel
+from torch import nn
 
 import wandb
 from pystatic.data import get_datasets
@@ -115,7 +117,8 @@ def run_experiment(
     batch_size: int,
     learning_rate: float,
     epochs: int,
-    l2_norm: float | None = None,
+    l2_norm: float | None,
+    use_matryoshka: bool,
 ) -> None:
     """Run the distillation experiment."""
     # Workaround for local development
@@ -127,7 +130,15 @@ def run_experiment(
 
     logger.info(f"Starting experiment: {name}")
 
+    loss: nn.Module
     loss = CosineLoss(model=model, l2_norm=l2_norm)
+    if use_matryoshka:
+        emb_dim = model.get_sentence_embedding_dimension()
+        assert emb_dim is not None
+        dims = [emb_dim]
+        while dims[-1] > 32:
+            dims.append(dims[-1] // 2)
+        loss = MatryoshkaLoss(model, loss, matryoshka_dims=dims)
 
     evaluators: list[SentenceEvaluator] = []
     stsb_eval_dataset = cast(Dataset, load_dataset("sentence-transformers/stsb", split="validation"))
@@ -226,4 +237,6 @@ if __name__ == "__main__":
         parsed_args.batch_size,
         parsed_args.learning_rate,
         parsed_args.epochs,
+        l2_norm=None,
+        use_matryoshka=False,
     )

@@ -40,13 +40,13 @@ if __name__ == "__main__":
     model_dim = parsed_args.model_dim
 
     initialize_from_model = ["mixedbread-ai/mxbai-embed-large-v1"]
-    l2_norms = [1e-4, 1e-3]
+    use_matryoshka = [True]
 
-    for model_to_initialize_from, l2_norm in product(initialize_from_model, l2_norms):
+    for model_to_initialize_from, mat in product(initialize_from_model, use_matryoshka):
         experiment_name_parts = [
             parsed_args.name,
             f"init_{'none' if model_to_initialize_from is None else 'from_model'}",
-            f"l2norm_{l2_norm}",
+            f"matryoshka_{mat}",
         ]
         parsed_args.experiment_name = "_".join(experiment_name_parts)
 
@@ -70,5 +70,6 @@ if __name__ == "__main__":
             parsed_args.batch_size,
             parsed_args.learning_rate,
             parsed_args.epochs,
-            l2_norm=l2_norm,
+            l2_norm=None,
+            use_matryoshka=mat,
         )
