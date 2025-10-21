@@ -180,8 +180,8 @@ def run_experiment(
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         learning_rate=learning_rate,
-        lr_scheduler_type="linear",
-        warmup_ratio=0.0,
+        lr_scheduler_type="cosine_warmup_with_min_lr",
+        warmup_ratio=0.1,
         eval_strategy="steps",
         eval_steps=eval_step,
         save_strategy="steps",
@@ -191,11 +191,12 @@ def run_experiment(
         logging_first_step=True,
         run_name=name,
         report_to=["wandb"],
-        weight_decay=0.0,
+        weight_decay=0.01,
         load_best_model_at_end=False,
         dataloader_num_workers=n_workers,
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
+        lr_scheduler_kwargs={"min_lr_ratio": 0.10, "num_cycles": 0.5},
     )
 
     trainer = SentenceTransformerTrainer(
