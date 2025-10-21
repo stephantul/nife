@@ -1,5 +1,6 @@
 import argparse
 import logging
+import math
 import random
 from typing import cast
 
@@ -163,7 +164,8 @@ def run_experiment(
     n_steps = n_samples // batch_size
     total_steps = n_steps * epochs
 
-    n_cycles = epochs / 5
+    raw_cycles = epochs / 5
+    num_cycles = math.floor(raw_cycles) + 0.5
 
     wandb.init(project="distillation", name=name)
     args = SentenceTransformerTrainingArguments(
@@ -190,7 +192,7 @@ def run_experiment(
         dataloader_num_workers=n_workers,
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
-        lr_scheduler_kwargs={"min_lr_rate": 0.10, "num_cycles": n_cycles},
+        lr_scheduler_kwargs={"min_lr_rate": 0.10, "num_cycles": num_cycles},
         max_grad_norm=1.0,
     )
 
