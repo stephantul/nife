@@ -13,13 +13,13 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, NanoBEIREvaluator, SentenceEvaluator
 from sentence_transformers.losses import MatryoshkaLoss
-from sentence_transformers.models import Module, Normalize, Router
+from sentence_transformers.models import Dense, Module, Normalize, Router
 from skeletoken import TokenizerModel
 from torch import nn
 
 import wandb
 from pystatic.data import get_datasets
-from pystatic.embedding import LayerNorm, TrainableStaticEmbedding, TrainableStaticEmbeddingWithW
+from pystatic.embedding import TrainableStaticEmbedding
 from pystatic.losses import CosineLoss
 
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
@@ -47,8 +47,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-shards", type=int, help="Limit the number of shards.")
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
     parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
-    parser.add_argument("--with-norm", action="store_true", help="Add layer normalization after the embeddings.")
-    parser.add_argument("--with-weights", action="store_true", help="Use per-token weights in the embedding layer.")
+    parser.add_argument("--with-dense", action="store_true", help="Whether to add a dense layer after the embeddings.")
     return parser.parse_args()
 
 
@@ -56,8 +55,7 @@ def initialize_model(
     tokenizer_path: str,
     model_to_initialize_from: str | None,
     model_dim: int | None,
-    with_norm: bool,
-    with_weights: bool,
+    with_dense: bool,
 ) -> SentenceTransformer:
     """Initialize the model."""
     tokenizer = TokenizerModel.from_pretrained(tokenizer_path).to_transformers()
@@ -68,12 +66,6 @@ def initialize_model(
         raise ValueError("Either model_dim or model_to_initialize_from must be provided.")
     if model_dim is not None and model_to_initialize_from is not None:
         logger.warning("Both model_dim and model_to_initialize_from are provided. Ignoring model_dim.")
-
-    cls: type[TrainableStaticEmbedding] | type[TrainableStaticEmbeddingWithW]
-    if with_weights:
-        cls = TrainableStaticEmbeddingWithW
-    else:
-        cls = TrainableStaticEmbedding
 
     if model_to_initialize_from:
         logger.info(f"Initializing from model {model_to_initialize_from}")
@@ -87,17 +79,17 @@ def initialize_model(
             vocab, batch_size=512, convert_to_numpy=False, convert_to_tensor=True, show_progress_bar=True
         )
         model_dim = weights.shape[1]
-        s = cls(
+        s = TrainableStaticEmbedding(
             tokenizer=tokenizer,
             embedding_weights=weights.cpu().numpy(),
         )
         modules.append(s)
     else:
-        s = cls(tokenizer=tokenizer, embedding_dim=model_dim)
+        s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
         modules.append(s)
-    if with_norm:
+    if with_dense:
         assert model_dim is not None
-        modules.append(LayerNorm(dim=model_dim))
+        modules.append(Dense(model_dim, model_dim, bias=True, activation_function=None))
     modules.append(Normalize())
 
     model = SentenceTransformer(modules=modules)
@@ -222,8 +214,7 @@ if __name__ == "__main__":
         tokenizer_path=parsed_args.tokenizer_path,
         model_to_initialize_from=parsed_args.initialize_from_model,
         model_dim=model_dim,
-        with_norm=parsed_args.with_norm,
-        with_weights=parsed_args.with_weights,
+        with_dense=parsed_args.with_dense,
     )
     dataset, n_samples = load_data(
         train_datasets=parsed_args.train_dataset,
