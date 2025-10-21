@@ -209,18 +209,6 @@ def run_experiment(
 
     model.save_pretrained(f"models/{name}/final")
 
-    model_name = "mixedbread-ai/mxbai-embed-large-v1"
-    big_model = SentenceTransformer(model_name)
-
-    router = Router.for_query_document(query_modules=[model], document_modules=[big_model])  # type: ignore
-    s = SentenceTransformer(modules=[router])
-
-    # Evaluate the model
-    results = nanobeir_evaluator(s, output_path=f"results/nanobeir/router-{name}")
-    print(results)  # noqa: T201
-    assert wandb.run is not None
-    wandb.run.summary["nanobeir_results"] = results
-
 
 if __name__ == "__main__":
     parsed_args = _parse_args()
@@ -249,3 +237,17 @@ if __name__ == "__main__":
         l2_norm=None,
         use_matryoshka=True,
     )
+
+    if parsed_args.initialize_from_model:
+        model_name = parsed_args.initialize_from_model
+        big_model = SentenceTransformer(model_name)
+
+        router = Router.for_query_document(query_modules=[model], document_modules=[big_model])  # type: ignore
+        s = SentenceTransformer(modules=[router])
+
+        nanobeir_evaluator = NanoBEIREvaluator()
+        # Evaluate the model
+        results = nanobeir_evaluator(s, output_path=f"results/nanobeir/router-{parsed_args.name}")
+        print(results)  # noqa: T201
+        assert wandb.run is not None
+        wandb.run.summary["nanobeir_results"] = results
