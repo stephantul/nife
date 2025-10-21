@@ -22,7 +22,7 @@ from pystatic.data import get_datasets
 from pystatic.embedding import LayerNorm, TrainableStaticEmbedding, TrainableStaticEmbeddingWithW
 from pystatic.losses import CosineLoss
 
-logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.ERROR)
+logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
 logger = logging.getLogger(__name__)
 random.seed(12)
 
@@ -37,11 +37,9 @@ def _parse_args() -> argparse.Namespace:
         help="Path to the training datasets",
         nargs="+",
     )
-    parser.add_argument("--text-field", type=str, default="sentence", help="Field in the dataset to use as text.")
     parser.add_argument("--model-dim", type=int, default=1024, help="Dimensionality of the model.")
     parser.add_argument("--batch-size", type=int, default=2048, help="Batch size for training.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of epochs for training.")
-    parser.add_argument("--total-steps", type=int, help="Total number of training steps, -1 for automatic.")
     parser.add_argument("--learning-rate", type=float, default=0.05, help="Learning rate for training.")
     parser.add_argument(
         "--tokenizer-path", type=str, default="mixedbread-ai/mxbai-embed-large-v1", help="Path to the tokenizer."
@@ -85,7 +83,9 @@ def initialize_model(
         model_dim = dim
         v, _ = zip(*sorted(tokenizer.get_vocab().items(), key=lambda x: x[1]))
         vocab: list[str] = list(v)
-        weights = model.encode(vocab, batch_size=512, convert_to_numpy=False, convert_to_tensor=True)
+        weights = model.encode(
+            vocab, batch_size=512, convert_to_numpy=False, convert_to_tensor=True, show_progress_bar=True
+        )
         model_dim = weights.shape[1]
         s = cls(
             tokenizer=tokenizer,
