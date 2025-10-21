@@ -137,10 +137,20 @@ def mldr_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 def msmarco_queries_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MS MARCO BM25 queries dataset."""
     return _simple_text_field_dataset(
-        dataset_name="msmarco-bm25",
-        huggingface_name="sentence-transformers/msmarco-bm25",
-        text_field="query",
-        config="triplet",
+        dataset_name="msmarco",
+        huggingface_name="sentence-transformers/msmarco-corpus",
+        text_field="text",
+        config="query",
+    )
+
+
+def msmarco_docs_dataset() -> tuple[str, Iterator[dict[str, str]]]:
+    """Get the MS MARCO BM25 documents dataset."""
+    return _simple_text_field_dataset(
+        dataset_name="msmarco",
+        huggingface_name="sentence-transformers/msmarco-corpus",
+        text_field="text",
+        config="passage",
     )
 
 
@@ -204,7 +214,8 @@ def get_all_dataset_functions() -> dict[str, Callable[[], tuple[str, Iterator[di
         "paws": paws_dataset,
         "squad": squad_dataset,
         "mldr": mldr_dataset,
-        "msmarco-bm25": msmarco_queries_dataset,
+        "msmarco": msmarco_queries_dataset,
+        "msmarco_docs": msmarco_docs_dataset,
         "PubMedQA": pubmed_dataset,
         "swim-ir-monolingual": swim_ir_dataset,
         "trivia_qa": triviaqa_dataset,
