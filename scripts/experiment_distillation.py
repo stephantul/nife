@@ -116,6 +116,7 @@ def run_experiment(
     epochs: int,
     use_matryoshka: bool,
     loss_function_class: type[nn.Module],
+    loss_function_params: dict | None = None,
 ) -> None:
     """Run the distillation experiment."""
     # Workaround for local development
@@ -128,7 +129,7 @@ def run_experiment(
     logger.info(f"Starting experiment: {name}")
 
     loss: nn.Module
-    loss = loss_function_class(model=model)
+    loss = loss_function_class(model=model, **(loss_function_params or {}))
     if use_matryoshka:
         emb_dim = model.get_sentence_embedding_dimension()
         assert emb_dim is not None

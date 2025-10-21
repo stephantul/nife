@@ -39,13 +39,14 @@ if __name__ == "__main__":
     parsed_args = _parse_args()
     model_dim = parsed_args.model_dim
 
-    for name in ["cosine", "relational_kld", "mse", "distillation_cosine"]:
+    for tau in [0.1, 0.3, 0.5]:
         experiment_name_parts = [
             parsed_args.name,
-            f"loss_{name}",
+            f"tau{tau}",
         ]
-        loss_function = select_loss(name)
+        loss_function = select_loss("distillation_cosine")
         parsed_args.experiment_name = "_".join(experiment_name_parts)
+        loss_function_params = {"tau": tau}
 
         model = initialize_model(
             tokenizer_path=parsed_args.tokenizer_path,
@@ -67,4 +68,5 @@ if __name__ == "__main__":
             parsed_args.epochs,
             use_matryoshka=True,
             loss_function_class=loss_function,
+            loss_function_params=loss_function_params,
         )
