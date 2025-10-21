@@ -40,9 +40,8 @@ class RelationalKLLoss(MSELoss):
         labels = torch.nn.functional.normalize(labels[:, : embeddings.shape[1]], p=2, dim=1)
 
         tau = 0.07
-        with torch.no_grad():
-            P = F.softmax((embeddings @ embeddings.T) / tau, dim=1)  # teacher similarity distribution
-            Q = F.log_softmax((labels @ labels.T) / tau, dim=1)
+        P = F.softmax((embeddings @ embeddings.T) / tau, dim=1)  # teacher similarity distribution
+        Q = F.log_softmax((labels @ labels.T) / tau, dim=1)
         loss = F.kl_div(Q, P, reduction="batchmean") * (tau**2)
 
         return loss
