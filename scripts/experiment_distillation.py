@@ -69,7 +69,7 @@ def initialize_model(
     if model_dim is None and model_to_initialize_from is None:
         raise ValueError("Either model_dim or model_to_initialize_from must be provided.")
     if model_dim is not None and model_to_initialize_from is not None:
-        raise ValueError("Both model_dim and model_to_initialize_from cannot be provided at the same time.")
+        logger.warning("Both model_dim and model_to_initialize_from are provided. Ignoring model_dim.")
 
     cls: type[TrainableStaticEmbedding] | type[TrainableStaticEmbeddingWithW]
     if with_weights:
