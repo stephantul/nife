@@ -199,6 +199,7 @@ def run_experiment(
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
         lr_scheduler_kwargs={"min_lr_rate": 0.10, "num_cycles": n_cycles},
+        max_grad_norm=1.0,
     )
 
     trainer = SentenceTransformerTrainer(
