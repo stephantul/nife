@@ -171,7 +171,7 @@ def run_experiment(
     n_steps = n_samples // batch_size
     total_steps = n_steps * epochs
 
-    n_cycles = (parsed_args.n_epochs // 5) * 0.5
+    n_cycles = parsed_args.epochs / 5
 
     wandb.init(project="distillation", name=name)
     args = SentenceTransformerTrainingArguments(
