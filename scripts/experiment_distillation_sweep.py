@@ -1,8 +1,8 @@
 import argparse
 import logging
 import random
-from itertools import product
 
+from pystatic.losses import select_loss
 from scripts.experiment_distillation import initialize_model, load_data, run_experiment
 
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
@@ -39,20 +39,18 @@ if __name__ == "__main__":
     parsed_args = _parse_args()
     model_dim = parsed_args.model_dim
 
-    dense = [True, False]
-
-    for (with_dense,) in product(dense):
+    for name in ["cosine", "relational_kld", "mse", "distillation_cosine"]:
         experiment_name_parts = [
             parsed_args.name,
-            f"dense_{with_dense}",
+            f"loss_{name}",
         ]
+        loss_function = select_loss(name)
         parsed_args.experiment_name = "_".join(experiment_name_parts)
 
         model = initialize_model(
             tokenizer_path=parsed_args.tokenizer_path,
             model_to_initialize_from=parsed_args.initialize_from_model,
             model_dim=model_dim,
-            with_dense=with_dense,
         )
         dataset, n_samples = load_data(
             train_datasets=parsed_args.train_dataset,
@@ -67,6 +65,6 @@ if __name__ == "__main__":
             parsed_args.batch_size,
             parsed_args.learning_rate,
             parsed_args.epochs,
-            l2_norm=None,
             use_matryoshka=True,
+            loss_function_class=loss_function,
         )

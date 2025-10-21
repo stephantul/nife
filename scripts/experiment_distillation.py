@@ -1,6 +1,5 @@
 import argparse
 import logging
-import math
 import random
 from typing import cast
 
@@ -14,14 +13,14 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, NanoBEIREvaluator, SentenceEvaluator
 from sentence_transformers.losses import MatryoshkaLoss
-from sentence_transformers.models import Dense, Module, Normalize, Router
+from sentence_transformers.models import Module, Normalize, Router
 from skeletoken import TokenizerModel
 from torch import nn
 
 import wandb
 from pystatic.data import get_datasets
 from pystatic.embedding import TrainableStaticEmbedding
-from pystatic.losses import CosineLoss
+from pystatic.losses import select_loss
 
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -48,7 +47,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--limit-shards", type=int, help="Limit the number of shards.")
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
     parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
-    parser.add_argument("--with-dense", action="store_true", help="Whether to add a dense layer after the embeddings.")
+    parser.add_argument("--loss-function", type=str, default="cosine", help="Loss function to use.")
     return parser.parse_args()
 
 
@@ -56,7 +55,6 @@ def initialize_model(
     tokenizer_path: str,
     model_to_initialize_from: str | None,
     model_dim: int | None,
-    with_dense: bool,
 ) -> SentenceTransformer:
     """Initialize the model."""
     tokenizer = TokenizerModel.from_pretrained(tokenizer_path).to_transformers()
@@ -88,9 +86,6 @@ def initialize_model(
     else:
         s = TrainableStaticEmbedding(tokenizer=tokenizer, embedding_dim=model_dim)
         modules.append(s)
-    if with_dense:
-        assert model_dim is not None
-        modules.append(Dense(model_dim, model_dim, bias=True, activation_function=None))
     modules.append(Normalize())
 
     model = SentenceTransformer(modules=modules)
@@ -119,8 +114,8 @@ def run_experiment(
     batch_size: int,
     learning_rate: float,
     epochs: int,
-    l2_norm: float | None,
     use_matryoshka: bool,
+    loss_function_class: type[nn.Module],
 ) -> None:
     """Run the distillation experiment."""
     # Workaround for local development
@@ -133,7 +128,7 @@ def run_experiment(
     logger.info(f"Starting experiment: {name}")
 
     loss: nn.Module
-    loss = CosineLoss(model=model, l2_norm=l2_norm)
+    loss = loss_function_class(model=model)
     if use_matryoshka:
         emb_dim = model.get_sentence_embedding_dimension()
         assert emb_dim is not None
@@ -164,8 +159,7 @@ def run_experiment(
     n_steps = n_samples // batch_size
     total_steps = n_steps * epochs
 
-    raw_cycles = epochs / 5
-    num_cycles = math.floor(raw_cycles) + 0.5
+    num_cycles = 0.5
 
     wandb.init(project="distillation", name=name)
     args = SentenceTransformerTrainingArguments(
@@ -212,11 +206,12 @@ if __name__ == "__main__":
     parsed_args = _parse_args()
     model_dim = parsed_args.model_dim
 
+    loss_function = select_loss(parsed_args.loss_function)
+
     model = initialize_model(
         tokenizer_path=parsed_args.tokenizer_path,
         model_to_initialize_from=parsed_args.initialize_from_model,
         model_dim=model_dim,
-        with_dense=parsed_args.with_dense,
     )
     dataset, n_samples = load_data(
         train_datasets=parsed_args.train_dataset,
@@ -231,8 +226,8 @@ if __name__ == "__main__":
         parsed_args.batch_size,
         parsed_args.learning_rate,
         parsed_args.epochs,
-        l2_norm=None,
         use_matryoshka=True,
+        loss_function_class=loss_function,
     )
 
     if parsed_args.initialize_from_model:
