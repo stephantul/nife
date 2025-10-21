@@ -171,6 +171,8 @@ def run_experiment(
     n_steps = n_samples // batch_size
     total_steps = n_steps * epochs
 
+    n_cycles = (parsed_args.n_epochs // 5) * 0.5
+
     wandb.init(project="distillation", name=name)
     args = SentenceTransformerTrainingArguments(
         # Required parameter:
@@ -196,7 +198,7 @@ def run_experiment(
         dataloader_num_workers=n_workers,
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
-        lr_scheduler_kwargs={"min_lr_rate": 0.10, "num_cycles": 0.5},
+        lr_scheduler_kwargs={"min_lr_rate": 0.10, "num_cycles": n_cycles},
     )
 
     trainer = SentenceTransformerTrainer(
@@ -246,7 +248,7 @@ if __name__ == "__main__":
         router = Router.for_query_document(query_modules=[model], document_modules=[big_model])  # type: ignore
         s = SentenceTransformer(modules=[router])
 
-        nanobeir_evaluator = NanoBEIREvaluator()
+        nanobeir_evaluator = NanoBEIREvaluator(batch_size=8)
         # Evaluate the model
         results = nanobeir_evaluator(s, output_path=f"results/nanobeir/router-{parsed_args.name}")
         print(results)  # noqa: T201
