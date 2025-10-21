@@ -57,7 +57,7 @@ def _parse_args() -> argparse.Namespace:
 def initialize_model(
     tokenizer_path: str,
     model_to_initialize_from: str | None,
-    model_dim: int,
+    model_dim: int | None,
     with_norm: bool,
     with_weights: bool,
 ) -> SentenceTransformer:
@@ -65,6 +65,11 @@ def initialize_model(
     tokenizer = TokenizerModel.from_pretrained(tokenizer_path).to_transformers()
 
     modules: list[Module] = []
+
+    if model_dim is None and model_to_initialize_from is None:
+        raise ValueError("Either model_dim or model_to_initialize_from must be provided.")
+    if model_dim is not None and model_to_initialize_from is not None:
+        logger.warning("Both model_dim and model_to_initialize_from are provided. Ignoring model_dim.")
 
     cls: type[TrainableStaticEmbedding] | type[TrainableStaticEmbeddingWithW]
     if with_weights:
@@ -75,9 +80,12 @@ def initialize_model(
     if model_to_initialize_from:
         logger.info(f"Initializing from model {model_to_initialize_from}")
         model = SentenceTransformer(model_to_initialize_from)
+        dim = model.get_sentence_embedding_dimension()
+        assert dim is not None
+        model_dim = dim
         v, _ = zip(*sorted(tokenizer.get_vocab().items(), key=lambda x: x[1]))
         vocab: list[str] = list(v)
-        weights = model.encode(vocab, batch_size=2048, convert_to_numpy=False, convert_to_tensor=True)
+        weights = model.encode(vocab, batch_size=512, convert_to_numpy=False, convert_to_tensor=True)
         model_dim = weights.shape[1]
         s = cls(
             tokenizer=tokenizer,
@@ -88,6 +96,7 @@ def initialize_model(
         s = cls(tokenizer=tokenizer, embedding_dim=model_dim)
         modules.append(s)
     if with_norm:
+        assert model_dim is not None
         modules.append(LayerNorm(dim=model_dim))
     modules.append(Normalize())
 
