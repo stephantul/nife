@@ -28,7 +28,7 @@ class CosineLoss(MSELoss):
 
 
 class DistillationCosineLoss(MSELoss):
-    def __init__(self, model: SentenceTransformer, tau: float = 0.3) -> None:
+    def __init__(self, model: SentenceTransformer, tau: float = 0.07) -> None:
         """Cosine loss."""
         super().__init__(model=model)
         self.tau = tau
