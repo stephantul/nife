@@ -3,13 +3,13 @@ from pathlib import Path
 
 from datasets import IterableDataset
 from skeletoken import TokenizerModel
-from tokenizers import Tokenizer
-from tokenizers.models import BPE
-from tokenizers.normalizers import NFD, Lowercase, StripAccents
+from tokenizers import Regex, Tokenizer
+from tokenizers.models import WordPiece
+from tokenizers.normalizers import NFD, Lowercase, Replace, StripAccents
 from tokenizers.normalizers import Sequence as NormalizerSequence
-from tokenizers.pre_tokenizers import BertPreTokenizer, Metaspace
+from tokenizers.pre_tokenizers import BertPreTokenizer
 from tokenizers.pre_tokenizers import Sequence as PreTokenizerSequence
-from tokenizers.trainers import BpeTrainer
+from tokenizers.trainers import WordPieceTrainer
 
 from pystatic.data import get_datasets
 
@@ -38,24 +38,20 @@ if __name__ == "__main__":
         [Path(p) for p in parsed_args.datasets], in_memory=parsed_args.in_memory, limit_shards=parsed_args.limit_shards
     )
 
-    model = BPE(
+    model = WordPiece(
+        vocab={},
         unk_token="[UNK]",
-        continuing_subword_prefix="",
-        end_of_word_suffix="",
-        fuse_unk=True,
-        byte_fallback=False,
-        dropout=0.25,
+        max_input_chars_per_word=100,
     )
     tokenizer = Tokenizer(model)
-    tokenizer.normalizer = NormalizerSequence([NFD(), Lowercase(), StripAccents()])  # type: ignore
-    tokenizer.pre_tokenizer = PreTokenizerSequence([Metaspace(split=True), BertPreTokenizer()])  # type: ignore
+    tokenizer.normalizer = NormalizerSequence([NFD(), Lowercase(), StripAccents(), Replace(Regex(r"[^\w\s]+"), "")])  # type: ignore
+    tokenizer.pre_tokenizer = PreTokenizerSequence([BertPreTokenizer()])  # type: ignore
 
-    trainer = BpeTrainer(
+    trainer = WordPieceTrainer(
         vocab_size=parsed_args.vocab_size,
         special_tokens=["[UNK]", "[PAD]"],
-        continuing_subword_prefix="",
+        continuing_subword_prefix="##",
         end_of_word_suffix="",
-        max_token_length=16,
     )
     if isinstance(data, IterableDataset):
         sentences = (x["sentence"] for x in data)
