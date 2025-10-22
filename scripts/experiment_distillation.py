@@ -46,6 +46,7 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--limit-shards", type=int, help="Limit the number of shards.")
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
+    parser.add_argument("--trained-model", type=str, help="Path to a trained model to continue training from.")
     parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
     parser.add_argument("--loss-function", type=str, default="cosine", help="Loss function to use.")
     return parser.parse_args()
@@ -209,11 +210,23 @@ if __name__ == "__main__":
 
     loss_function = select_loss(parsed_args.loss_function)
 
-    model = initialize_model(
-        tokenizer_path=parsed_args.tokenizer_path,
-        model_to_initialize_from=parsed_args.initialize_from_model,
-        model_dim=model_dim,
-    )
+    if parsed_args.trained_model:
+        if parsed_args.initialize_from_model:
+            logger.warning(
+                "Both --trained-model and --initialize-from-model are provided. Ignoring --initialize-from-model."
+            )
+        if parsed_args.model_dim:
+            logger.warning(
+                "--model-dim is provided while continuing training from a trained model. Ignoring --model-dim."
+            )
+        logger.info(f"Loading trained model from {parsed_args.trained_model}")
+        model = SentenceTransformer(parsed_args.trained_model)
+    else:
+        model = initialize_model(
+            tokenizer_path=parsed_args.tokenizer_path,
+            model_to_initialize_from=parsed_args.initialize_from_model,
+            model_dim=model_dim,
+        )
     dataset, n_samples = load_data(
         train_datasets=parsed_args.train_dataset,
         in_memory=parsed_args.in_memory,
