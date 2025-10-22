@@ -147,7 +147,7 @@ def msmarco_queries_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 def msmarco_docs_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MS MARCO BM25 documents dataset."""
     return _simple_text_field_dataset(
-        dataset_name="msmarco",
+        dataset_name="msmarco_docs",
         huggingface_name="sentence-transformers/msmarco-corpus",
         text_field="text",
         config="passage",
