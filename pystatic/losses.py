@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Sequence
 
 import torch
@@ -47,11 +48,21 @@ class DistillationCosineLoss(MSELoss):
         return F.cross_entropy(sim / self.tau, torch.arange(embeddings.size(0), device=embeddings.device))
 
 
-def select_loss(name: str) -> type[nn.Module]:
+class LossFunction(str, Enum):
+    """Different loss functions."""
+
+    COSINE = "cosine"
+    DISTILLATION_COSINE = "distillation_cosine"
+
+
+def select_loss(name: str | LossFunction) -> type[nn.Module]:
     """Select loss function by name."""
-    if name == "cosine":
-        return CosineLoss
-    elif name == "distillation_cosine":
-        return DistillationCosineLoss
-    else:
-        raise ValueError(f"Unknown loss function: {name}")
+    try:
+        function = LossFunction(name)
+    except ValueError:
+        raise ValueError(f"Unknown loss function: {name}, available options are: {[e.value for e in LossFunction]}")
+    match function:
+        case LossFunction.COSINE:
+            return CosineLoss
+        case LossFunction.DISTILLATION_COSINE:
+            return DistillationCosineLoss
