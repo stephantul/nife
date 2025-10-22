@@ -65,7 +65,7 @@ def parse_args() -> Namespace:
 
 def sanitize_model_name(model_name: str) -> str:
     """Sanitize model name for use in file paths."""
-    return model_name.replace("/", "__").replace("-", "_")
+    return model_name.replace("/", "__")
 
 
 def main() -> None:
@@ -100,7 +100,7 @@ def main() -> None:
         dataset_func = dataset_functions[dataset_name]
         actual_name, dataset_iterator = dataset_func()
 
-        converted_dir = Path(args.converted_base_dir) / safe_model_name / f"{actual_name}_{safe_model_name}"
+        converted_dir = Path(args.converted_base_dir) / safe_model_name / actual_name
         converted_dir.mkdir(parents=True, exist_ok=True)
         run_inference(
             model=model,
