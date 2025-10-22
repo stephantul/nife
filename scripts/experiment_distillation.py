@@ -20,6 +20,7 @@ from torch import nn
 import wandb
 from pystatic.data import get_datasets
 from pystatic.embedding import TrainableStaticEmbedding
+from pystatic.initialization.model import initialize_from_model
 from pystatic.losses import select_loss
 
 logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
@@ -70,15 +71,7 @@ def initialize_model(
     if model_to_initialize_from:
         logger.info(f"Initializing from model {model_to_initialize_from}")
         model = SentenceTransformer(model_to_initialize_from)
-        dim = model.get_sentence_embedding_dimension()
-        assert dim is not None
-        model_dim = dim
-        v, _ = zip(*sorted(tokenizer.get_vocab().items(), key=lambda x: x[1]))
-        vocab: list[str] = list(v)
-        weights = model.encode(
-            vocab, batch_size=512, convert_to_numpy=False, convert_to_tensor=True, show_progress_bar=True
-        )
-        model_dim = weights.shape[1]
+        weights = initialize_from_model(model, tokenizer)
         s = TrainableStaticEmbedding(
             tokenizer=tokenizer,
             embedding_weights=weights.cpu().numpy(),
