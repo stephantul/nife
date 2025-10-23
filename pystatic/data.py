@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from collections.abc import Iterator, Sequence
 from pathlib import Path
-from typing import cast
+from typing import Literal, cast, overload
 
 import numpy as np
 import pyarrow.parquet as pq
@@ -138,6 +138,33 @@ def _collect_parquet_shards(path_or_repo: Path) -> list[Path]:
         shards = list(local.glob("**/*.parquet"))
     shards.sort(key=lambda p: p.as_posix())
     return shards
+
+
+@overload
+def get_datasets(
+    paths: Sequence[str] | Sequence[Path],
+    in_memory: Literal[True],
+    limit_shards: int | None = None,
+    columns_to_keep: set[str] = {"sentence", "label", "question"},
+) -> tuple[Dataset, int]: ...
+
+
+@overload
+def get_datasets(
+    paths: Sequence[str] | Sequence[Path],
+    in_memory: Literal[False],
+    limit_shards: int | None = None,
+    columns_to_keep: set[str] = {"sentence", "label", "question"},
+) -> tuple[IterableDataset, int]: ...
+
+
+@overload
+def get_datasets(
+    paths: Sequence[str] | Sequence[Path],
+    in_memory: bool,
+    limit_shards: int | None = None,
+    columns_to_keep: set[str] = {"sentence", "label", "question"},
+) -> tuple[IterableDataset | Dataset, int]: ...
 
 
 def get_datasets(

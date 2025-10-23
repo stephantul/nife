@@ -21,11 +21,9 @@ import wandb
 from pystatic.data import get_datasets
 from pystatic.embedding import TrainableStaticEmbedding
 from pystatic.initialization.model import initialize_from_model
-from pystatic.losses import select_loss
+from pystatic.losses import LossFunction, select_loss
 
-logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
 logger = logging.getLogger(__name__)
-random.seed(12)
 
 
 def _parse_args() -> argparse.Namespace:
@@ -100,19 +98,6 @@ def initialize_model(
     return model
 
 
-def load_data(
-    train_datasets: list[str], in_memory: bool, limit_shards: int | None
-) -> tuple[Dataset | IterableDataset, int]:
-    """Get the training data."""
-    datasets, n_samples = get_datasets(
-        paths=train_datasets,
-        in_memory=in_memory,
-        limit_shards=limit_shards,
-    )
-    logger.info(f"Number of training samples: {n_samples}")
-    return datasets, n_samples
-
-
 def run_experiment(
     model: SentenceTransformer,
     name: str,
@@ -122,8 +107,7 @@ def run_experiment(
     learning_rate: float,
     epochs: int,
     use_matryoshka: bool,
-    loss_function_class: type[nn.Module],
-    loss_function_params: dict | None = None,
+    loss_function_name: str | LossFunction,
 ) -> None:
     """Run the distillation experiment."""
     # Workaround for local development
@@ -136,7 +120,8 @@ def run_experiment(
     logger.info(f"Starting experiment: {name}")
 
     loss: nn.Module
-    loss = loss_function_class(model=model, **(loss_function_params or {}))
+    loss_function = select_loss(loss_function_name)
+    loss = loss_function(model)
     if use_matryoshka:
         emb_dim = model.get_sentence_embedding_dimension()
         assert emb_dim is not None
@@ -211,6 +196,8 @@ def run_experiment(
 
 
 if __name__ == "__main__":
+    random.seed(12)
+    logging.basicConfig(format="%(asctime)s - %(message)s", datefmt="%Y-%m-%d %H:%M:%S", level=logging.INFO)
     parsed_args = _parse_args()
     model_dim = parsed_args.model_dim
 
@@ -240,10 +227,11 @@ if __name__ == "__main__":
             model_dim=model_dim,
             additional_vocabulary=additional_vocab,
         )
-    dataset, n_samples = load_data(
-        train_datasets=parsed_args.train_dataset,
+    dataset, n_samples = get_datasets(
+        paths=parsed_args.train_dataset,
         in_memory=parsed_args.in_memory,
         limit_shards=parsed_args.limit_shards,
+        columns_to_keep={"sentence", "label"},
     )
     run_experiment(
         model,
@@ -254,7 +242,7 @@ if __name__ == "__main__":
         parsed_args.learning_rate,
         parsed_args.epochs,
         use_matryoshka=True,
-        loss_function_class=loss_function,
+        loss_function_name=parsed_args.loss_function,
     )
 
     if parsed_args.initialize_from_model:

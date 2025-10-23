@@ -1,13 +1,21 @@
-import random
+import concurrent.futures
 from argparse import ArgumentParser, Namespace
 from collections import Counter
 from pathlib import Path
-from typing import Sequence, cast
 
-from datasets import Dataset, IterableDataset, concatenate_datasets, load_dataset
+from datasets import Dataset
 from skeletoken import TokenizerModel
 from skeletoken.preprocessor import Preprocessor
 from tqdm import tqdm
+
+from pystatic.data import get_datasets
+
+
+def _process_example(example) -> tuple[Counter[str], set[str]]:
+    """Process a single example to count tokens."""
+    text = example["text"]
+    tokens = preprocessor.preprocess(text)
+    return Counter(tokens), set(tokens)
 
 
 def _parse_args() -> Namespace:
@@ -22,51 +30,30 @@ def _parse_args() -> Namespace:
         help="Path to the datasets",
         nargs="+",
     )
+    parser.add_argument("--text-column-name", type=str, default="text", help="Name of the text column.")
     parser.add_argument("--in-memory", action="store_true", help="Load the dataset in memory.")
 
     return parser.parse_args()
-
-
-def datasets(paths: Sequence[Path], in_memory: bool = True) -> IterableDataset:
-    """Load the datasets."""
-    if in_memory:
-        datasets = []
-        for path in paths:
-            dataset = load_dataset(path=str(path), split="train")
-            column_names = dataset.column_names
-            assert column_names is not None
-            columns_to_drop = [c for c in column_names if c not in ("text",)]
-            dataset = dataset.remove_columns(columns_to_drop)
-            datasets.append(dataset)
-        return concatenate_datasets(datasets)
-
-    all_shards = []
-    for path in paths:
-        all_shards.extend([str(x) for x in Path(path).glob("**/*.parquet")])
-    random.shuffle(all_shards)
-    dataset = load_dataset("parquet", data_files=all_shards, split="train", streaming=True)
-    column_names = dataset.column_names
-    assert column_names is not None
-    columns_to_drop = [c for c in column_names if c not in ("text",)]
-    dataset = dataset.remove_columns(columns_to_drop)
-
-    return cast(IterableDataset, dataset)
 
 
 if __name__ == "__main__":
     parsed_args = _parse_args()
     tokenizer_model = TokenizerModel.from_pretrained(parsed_args.model_name)
     preprocessor = Preprocessor.from_tokenizer_model(tokenizer_model)
-
-    data = datasets([Path(p) for p in parsed_args.datasets], in_memory=parsed_args.in_memory)
+    text_column_name: str = parsed_args.text_column_name
+    in_memory = bool(parsed_args.in_memory)
+    data, total = get_datasets(
+        [Path(p) for p in parsed_args.datasets], in_memory=in_memory, columns_to_keep={text_column_name}
+    )
 
     counts: Counter[str] = Counter()
     df: Counter[str] = Counter()
-    for example in tqdm(data):
-        text = example["text"]
-        tokens = preprocessor.preprocess(text)
-        counts.update(tokens)
-        df.update(set(tokens))
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        for item in tqdm(executor.map(_process_example, data), total=total):
+            token_counter, token_set = item
+            counts.update(token_counter)
+            df.update(token_set)
 
     toks, token_counts = zip(*sorted(counts.items(), key=lambda x: x[1], reverse=True))
     token_dfs = [df[t] for t in toks]
