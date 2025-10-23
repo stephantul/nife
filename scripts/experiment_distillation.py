@@ -219,6 +219,8 @@ if __name__ == "__main__":
     if parsed_args.vocab_dataset:
         vocab_data = cast(Dataset, load_dataset(parsed_args.vocab_dataset, split="train"))
         additional_vocab = vocab_data["token"][: parsed_args.vocab_size]
+    else:
+        additional_vocab = None
 
     if parsed_args.trained_model:
         if parsed_args.initialize_from_model:
@@ -236,6 +238,7 @@ if __name__ == "__main__":
             tokenizer_path=parsed_args.tokenizer_path,
             model_to_initialize_from=parsed_args.initialize_from_model,
             model_dim=model_dim,
+            additional_vocabulary=additional_vocab,
         )
     dataset, n_samples = load_data(
         train_datasets=parsed_args.train_dataset,
