@@ -59,7 +59,6 @@ if __name__ == "__main__":
         sentences = data["sentence"]
 
     tokenizer.train_from_iterator(sentences, trainer=trainer)
-    tokenizer.model.dropout = 0.0
 
     converted = TokenizerModel.from_tokenizer(tokenizer=tokenizer)
     transformers_tokenizer = converted.to_transformers()
