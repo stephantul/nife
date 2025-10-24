@@ -21,7 +21,8 @@ def _parse_args() -> Namespace:
     parser.add_argument(
         "--vocabulary-data",
         type=str,
-        help="Path to the vocabulary dataset. This is a dataset with a 'token' column, sorted by frequency.",
+        nargs="+",
+        help="Path to one or more vocabulary datasets. This is a dataset with a 'token' column, sorted by frequency.",
     )
     parser.add_argument("--vocab-size", type=int, default=30000, help="New vocabulary size after expansion.")
     parser.add_argument(
