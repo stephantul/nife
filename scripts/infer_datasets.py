@@ -5,7 +5,7 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
 from pystatic.dataset_vault import get_all_dataset_functions
-from pystatic.utilities import run_inference
+from pystatic.distillation.infer import run_inference
 
 
 def parse_args() -> Namespace:
