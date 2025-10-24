@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from typing import cast
 
 import numpy as np
-from datasets import Dataset, load_dataset
+from datasets import Dataset, concatenate_datasets, load_dataset
 from skeletoken import TokenizerModel
 from tqdm import tqdm
 
@@ -42,7 +42,10 @@ if __name__ == "__main__":
     tokenizer_model = TokenizerModel.from_pretrained(parsed_args.tokenizer_name)
     tokenizer = tokenizer_model.to_tokenizer()
 
-    dataset = cast(Dataset, load_dataset(parsed_args.vocabulary_data, split="train"))
+    datasets = []
+    for data in parsed_args.vocabulary_data:
+        datasets.append(cast(Dataset, load_dataset(data, split="train")))
+    dataset = concatenate_datasets(datasets)
 
     old_vocab_size = tokenizer.get_vocab_size()
     original_vocab_counts = np.zeros(old_vocab_size, dtype=np.int32)
