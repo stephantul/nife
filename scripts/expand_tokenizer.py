@@ -1,4 +1,5 @@
 import logging
+import re
 from argparse import ArgumentParser, Namespace
 from collections.abc import Iterator
 from typing import cast
@@ -11,6 +12,8 @@ from tqdm import tqdm
 from pystatic.utilities import batchify
 
 logger = logging.getLogger(__name__)
+
+_NUMBERS_RE = re.compile(r"^\d+$")
 
 
 def _parse_args() -> Namespace:
@@ -28,6 +31,7 @@ def _parse_args() -> Namespace:
     parser.add_argument(
         "--min-subword-frequency", type=int, default=100, help="Minimum frequency for subwords to be included."
     )
+    parser.add_argument("--filter-numbers", action="store_true", help="Filter out tokens that are purely numeric.")
     return parser.parse_args()
 
 
@@ -63,6 +67,8 @@ if __name__ == "__main__":
     all_tokens = cast(Iterator[str], dataset["token"])
     tokens_added = 0
     for token in all_tokens:
+        if parsed_args.filter_numbers and _NUMBERS_RE.match(token):
+            continue
         if tokens_added >= n_tokens_to_add:
             break
         if token in tokenizer_model.vocabulary:
