@@ -51,12 +51,12 @@ def _parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def initialize_model(
+def _create_model(
     tokenizer_path: str,
     model_to_initialize_from: str | None,
     model_dim: int | None,
 ) -> SentenceTransformer:
-    """Initialize the model."""
+    """Create a model."""
     tokenizer_model = TokenizerModel.from_pretrained(tokenizer_path)
     tokenizer = tokenizer_model.to_transformers()
 
@@ -203,7 +203,7 @@ if __name__ == "__main__":
         logger.info(f"Loading trained model from {parsed_args.trained_model}")
         model = SentenceTransformer(parsed_args.trained_model)
     else:
-        model = initialize_model(
+        model = _create_model(
             tokenizer_path=parsed_args.tokenizer_path,
             model_to_initialize_from=parsed_args.initialize_from_model,
             model_dim=model_dim,
