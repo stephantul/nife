@@ -68,3 +68,5 @@ if __name__ == "__main__":
             continue
         tokenizer_model.add_token_to_vocabulary(token)
         tokens_added += 1
+
+    tokenizer_model.to_transformers().save_pretrained(parsed_args.output)
