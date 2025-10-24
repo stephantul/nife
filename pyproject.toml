@@ -60,11 +60,12 @@ ignore = [
 ]
 
 [tool.pydoclint]
-style = "numpy"
+style = "google"
 exclude = "test_"
 allow-init-docstring = true
-arg-type-hints-in-docstring = true
-check-return-types = true
+arg-type-hints-in-docstring = false
+check-return-types = false
+check-yield-types = false
 require-return-section-when-returning-nothing = false
 
 [tool.mypy]

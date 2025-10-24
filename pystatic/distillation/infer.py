@@ -51,7 +51,21 @@ def _write_data(path: Path, pooled: list[torch.Tensor], records: list[dict[str, 
 
 
 def _tokenize(strings: list[str], tokenizer: PreTrainedTokenizer, max_length: int) -> tuple[BatchEncoding, list[str]]:
-    """Tokenize a list of strings using a HuggingFace tokenizer."""
+    """
+    Tokenize a list of strings using a HuggingFace tokenizer.
+
+    This is mainly a helper function; it also returns the truncated strings, so that we don't have to
+    re-tokenize them later to find out how they were truncated.
+
+    Args:
+        strings: The list of strings to tokenize.
+        tokenizer: The HuggingFace tokenizer to use.
+        max_length: The maximum sequence length.
+
+    Returns:
+        A tuple of (BatchEncoding, list of truncated strings).
+
+    """
     strings = [x.strip()[:10000] for x in strings]  # Hard limit to 10k chars
     tokenized = tokenizer(
         strings,
@@ -89,13 +103,12 @@ def infer(
     We return the pooled output for each text.
 
     Args:
-    ----
         model: The SentenceTransformer model to use for inference.
         records: A sequence of records to infer embeddings for.
+        output_dir: The name of the directory to save the results to.
         batch_size: The batch size to use for inference. Defaults to 96.
         max_length: The maximum sequence length for tokenization. Defaults to 512.
         save_every: Save intermediate results every N batches. Defaults to 8192.
-        output_dir: The name of the directory to save the results to.
         limit_batches: An optional limit on the number of batches to process.
 
     """

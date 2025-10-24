@@ -9,21 +9,29 @@ from transformers import PreTrainedTokenizerFast
 
 def initialize_from_model(model: SentenceTransformer, tokenizer: PreTrainedTokenizerFast) -> torch.Tensor:
     """Initialize embeddings from a SentenceTransformer model and a tokenizer."""
+    # Load the tokenizer as a skeletoken TokenizerModel
     tokenizer_model = TokenizerModel.from_transformers_tokenizer(tokenizer)
 
+    # Get the tokenizer from the original model for alignment purposes.
     original_tokenizer = model.tokenizer
-    assert original_tokenizer is not None
+    # Cast the original tokenizer to the correct type
     original_tokenizer = cast(PreTrainedTokenizerFast, original_tokenizer)
 
     original_tokenizer_model = TokenizerModel.from_transformers_tokenizer(original_tokenizer)
+    # Get the pad token and pad token id
     pad_token = original_tokenizer_model.pad_token
     pad_token_id = original_tokenizer_model.model.vocab[pad_token] if pad_token is not None else 0
+
+    # Get the original vocabulary for lookups
     original_vocabulary = original_tokenizer.get_vocab()
 
+    # Get the new vocabulary.
     tokens = tokenizer_model.sorted_vocabulary
     word_prefix = tokenizer_model.word_prefix or ""
     subword_prefix = tokenizer_model.subword_prefix or ""
 
+    # Below: for each token in the new vocabulary, find its corresponding token id in the original tokenizer.
+    # do a fuzzy match without any word or subword prefixes. We'd rather featurize "##s" as "s" than as "##s".
     indices = []
     for token in tokens:
         token_without_prefix = token.removeprefix(word_prefix).removeprefix(subword_prefix)
@@ -35,6 +43,7 @@ def initialize_from_model(model: SentenceTransformer, tokenizer: PreTrainedToken
             token_ids = original_tokenizer.encode(token_without_prefix, add_special_tokens=True)
         indices.append(token_ids)
 
+    # Speed up: sort by length of token ids for consistent batch sizes.
     sort_order = torch.argsort(torch.tensor([len(ids) for ids in indices]))
     indices = [indices[i] for i in sort_order]
 
@@ -55,4 +64,5 @@ def initialize_from_model(model: SentenceTransformer, tokenizer: PreTrainedToken
             embeddings = model.forward(input_dict)["sentence_embedding"]
         out.append(embeddings)
 
+    # Inverse sort order.
     return torch.cat(out, dim=0)[torch.argsort(sort_order)]

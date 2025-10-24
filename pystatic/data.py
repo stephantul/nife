@@ -18,7 +18,19 @@ def _pair_stream(
     txt_path: Path,
     emb_path: Path,
 ) -> Iterator[tuple[dict[str, str], np.ndarray]]:
-    """Stream aligned (text, embedding_row) pairs from a txt jsonl + tensor file."""
+    """
+    Stream aligned (text, embedding_row) pairs from a txt jsonl and tensor file.
+
+    The text path can contain arbitrary dictionary fields, but will also contain a "text" field.
+
+    Args:
+        txt_path: Path to the text file (jsonl).
+        emb_path: Path to the embeddings file (torch tensor).
+
+    Yields:
+        Tuples of (record dict, embedding numpy array).
+
+    """
     embs = torch.load(emb_path)
     embs = embs.float().numpy()
 
@@ -30,30 +42,22 @@ def _pair_stream(
 
 def _iter_all_pairs(
     root: Path,
-    limit: int | None,
 ) -> Iterator[tuple[dict[str, str], np.ndarray]]:
     """Iterate all (text, embedding) pairs across the folder in a streaming fashion."""
-    mask = "pooled_{}.pt"
-
-    total = 0
     for txt_path in tqdm(sorted(root.glob("**/*.txt"))):
         name = txt_path.stem.split("_")[1]
-        emb_path = txt_path.parent / mask.format(name)
+        emb_path = txt_path.parent / f"pooled_{name}.pt"
         if not emb_path.exists():
             raise ValueError(f"Embedding file {emb_path} does not exist")
 
         for record, emb in _pair_stream(txt_path, emb_path):
             yield record, emb
-            total += 1
-            if limit is not None and total >= limit:
-                return
 
 
 def build_parquet_shards_from_folder(
     path: str | Path,
     out_dir: str | Path,
     *,
-    limit: int | None = None,
     rows_per_shard: int = 100_000,
 ) -> None:
     """Stream over (text, embedding) pairs and write sharded parquet files to disk."""
@@ -61,7 +65,7 @@ def build_parquet_shards_from_folder(
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    pair_iter = _iter_all_pairs(path, limit)
+    pair_iter = _iter_all_pairs(path)
     try:
         first_record, first_emb = next(pair_iter)
     except StopIteration:
@@ -88,14 +92,14 @@ def build_parquet_shards_from_folder(
         nonlocal shard_id, buffers, buf_embeddings
         if not buffers:
             return
-        ds = Dataset.from_dict(
+        dataset = Dataset.from_dict(
             {k: buffers[k] for k in keys} | {"embedding": np.vstack(buf_embeddings)}, features=features
         )
         # Write a single parquet file per shard for simple globbing later
         shard_path = out_dir / "train" / f"shard_{shard_id:05d}.parquet"
-        ds.to_parquet(str(shard_path))
+        dataset.to_parquet(str(shard_path))
         # release memory
-        del ds
+        del dataset
         buffers.clear()
         buf_embeddings.clear()
         shard_id += 1
@@ -115,29 +119,46 @@ def build_parquet_shards_from_folder(
 def _post_process_dataset(dataset: Dataset | IterableDataset, to_keep: set[str]) -> Dataset | IterableDataset:
     # Rename only if the source exists and the target is kept.
     assert dataset.column_names is not None
-    cols = set(dataset.column_names)
-    if "text" in cols and "sentence" in to_keep:
+    columns = set(dataset.column_names)
+    # Sentence transformers specific stuff.
+    if "text" in columns and "sentence" in to_keep:
         dataset = dataset.rename_column("text", "sentence")
-    if "embedding" in cols and "label" in to_keep:
+        columns.remove("text")
+        columns.add("sentence")
+    if "embedding" in columns and "label" in to_keep:
         dataset = dataset.rename_column("embedding", "label")
+        columns.remove("embedding")
+        columns.add("label")
 
-    assert dataset.column_names is not None
-    cols = set(dataset.column_names)
-    dataset = dataset.remove_columns([c for c in cols if c not in to_keep])
+    # Remove all columns not in to_keep
+    to_remove = columns - to_keep
+    dataset = dataset.remove_columns(list(to_remove))
 
     return dataset
 
 
 def _collect_parquet_shards(path_or_repo: Path) -> list[Path]:
-    """Return a sorted list of train/*.parquet for local dir or HF dataset repo."""
+    """
+    Return a sorted list of train/*.parquet for local dir or HF dataset repo.
+
+    The sort order is determined lexicographically by path.
+    If a HF dataset repo is given, we first download a local snapshot, and then return any shards
+    downloaded there. We never load the dataset as is.
+
+    Args:
+        path_or_repo: Local path or HF dataset repo name.
+
+    Returns:
+        List of parquet shard paths.
+
+    """
     if path_or_repo.is_dir():
-        shards = list(path_or_repo.glob("**/*.parquet"))
+        shards = path_or_repo.glob("**/*.parquet")
     else:
         api = HfApi()
         local = Path(api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset"))
-        shards = list(local.glob("**/*.parquet"))
-    shards.sort(key=lambda p: p.as_posix())
-    return shards
+        shards = local.glob("**/*.parquet")
+    return sorted(shards, key=lambda p: p.as_posix())
 
 
 @overload
@@ -171,23 +192,25 @@ def get_datasets(
     paths: Sequence[Path] | Sequence[str],
     in_memory: bool = True,
     limit_shards: int | None = None,
-    columns_to_keep: set[str] = {"sentence", "label", "question"},
+    columns_to_keep: set[str] = {"sentence", "label"},
 ) -> tuple[Dataset | IterableDataset, int]:
     """
     Gets datasets from the given paths.
 
-    The datasets can be loaded in memory or streamed from disk. If it is streamed, we load the
-    datasets as collections of parquet shards. In either case, we assume that the datasets have
-    a "train" split. In all cases, we assume that the datasets have "text" and "embedding"
+    The datasets can be loaded in memory or streamed from disk. In either case, we assume that
+    the datasets have a "train" split. In all cases, we assume that the datasets have "text" and "embedding"
     columns, which we rename to "sentence" and "label" respectively. We drop all other columns
     except those specified in `columns_to_keep`, which are "sentence" and "label" by default.
 
-    Arguments:
-    ---------
-    paths (Sequence[Path]): Paths to the datasets.
-    in_memory (bool): Whether to load the datasets in memory or stream them from disk.
-    limit_shards (int | None): If streaming, limit the number of shards to load from each dataset.
-    columns_to_keep (set[str]): Columns to keep in the dataset.
+    Args:
+        paths: Paths to the datasets.
+        in_memory: Whether to load the datasets in memory or stream them from disk.
+        limit_shards: If streaming, limit the number of shards to load from each dataset.
+        columns_to_keep: Columns to keep in the dataset.
+
+    Returns:
+        A tuple of (dataset, length), where dataset is either a Dataset or IterableDataset
+        depending on the `in_memory` flag, and length is the total number of records across all datasets.
 
     """
     paths = [Path(p) for p in paths]
@@ -198,6 +221,8 @@ def get_datasets(
             ps = ps[:limit_shards]
         shards.extend(ps)
 
+    # Get the length by reading metadata only.
+    # We might stream later, so we can't rely on length.
     length = sum(pq.read_metadata(p).num_rows for p in shards)
 
     data_files = [p.as_posix() for p in shards]

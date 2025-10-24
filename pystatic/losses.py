@@ -4,14 +4,14 @@ from typing import Sequence
 import torch
 import torch.nn.functional as F
 from sentence_transformers import SentenceTransformer
-from sentence_transformers.losses import MSELoss
 from torch import nn
 
 
-class CosineLoss(MSELoss):
+class CosineLoss(torch.nn.Module):
     def __init__(self, model: SentenceTransformer) -> None:
         """Cosine loss."""
-        super().__init__(model=model)
+        super().__init__()
+        self.model = model
         self.loss_fct = nn.CosineSimilarity()  # type: ignore
 
     def forward(self, sentence_features: Sequence[dict[str, torch.Tensor]], labels: torch.Tensor) -> torch.Tensor:  # type: ignore
@@ -28,12 +28,11 @@ class CosineLoss(MSELoss):
         return loss
 
 
-class DistillationCosineLoss(MSELoss):
+class DistillationCosineLoss(CosineLoss):
     def __init__(self, model: SentenceTransformer, tau: float = 0.07) -> None:
         """Cosine loss."""
         super().__init__(model=model)
         self.tau = tau
-        self.loss_fct = nn.CosineSimilarity()  # type: ignore
 
     def forward(self, sentence_features: Sequence[dict[str, torch.Tensor]], labels: torch.Tensor) -> torch.Tensor:  # type: ignore
         """Forward pass."""
