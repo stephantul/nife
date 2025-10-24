@@ -79,7 +79,7 @@ def _tokenize(strings: list[str], tokenizer: PreTrainedTokenizer, max_length: in
     return tokenized, [string[:length] for string, length in zip(strings, lengths)]
 
 
-def infer(
+def _generate_embeddings(
     model: SentenceTransformer,
     records: Iterator[dict[str, str]],
     output_dir: str | Path,
@@ -89,10 +89,10 @@ def infer(
     limit_batches: int | None = None,
 ) -> None:
     """
-    Infer embeddings for a stream of texts using a SentenceTransformer model.
+    Generate embeddings for a stream of texts using a SentenceTransformer model.
 
     This is mainly used as an inner loop for the knowledge distillation process.
-    We get N texts, and infer embeddings for them using the teacher model.
+    We get N texts, and create embeddings for them using the teacher model.
     These embeddings are then used to train the student model.
 
     We return the pooled output for each text.
@@ -160,7 +160,7 @@ def infer(
         _write_data(path, all_pooled, accumulated_records, shards_saved)
 
 
-def run_inference(
+def generate_and_save_embeddings(
     model: SentenceTransformer,
     output_folder: str | Path,
     records: Iterator[dict[str, str]],
@@ -171,7 +171,7 @@ def run_inference(
 ) -> None:
     """Run inference and save the results to parquet shards."""
     with TemporaryDirectory() as dir_name:
-        infer(
+        _generate_embeddings(
             model,
             records,
             batch_size=batch_size,

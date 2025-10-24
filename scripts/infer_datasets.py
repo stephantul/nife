@@ -5,7 +5,7 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
 from pystatic.dataset_vault import get_all_dataset_functions
-from pystatic.distillation.infer import run_inference
+from pystatic.distillation.infer import generate_and_save_embeddings
 
 
 def parse_args() -> Namespace:
@@ -102,7 +102,7 @@ def main() -> None:
 
         converted_dir = Path(args.converted_base_dir) / safe_model_name / actual_name
         converted_dir.mkdir(parents=True, exist_ok=True)
-        run_inference(
+        generate_and_save_embeddings(
             model=model,
             records=dataset_iterator,
             output_folder=converted_dir,
