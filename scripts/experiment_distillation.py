@@ -48,8 +48,6 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--trained-model", type=str, help="Path to a trained model to continue training from.")
     parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
     parser.add_argument("--loss-function", type=str, default="cosine", help="Loss function to use.")
-    parser.add_argument("--vocab-dataset", type=str, help="Dataset to use for vocabulary expansion.")
-    parser.add_argument("--vocab-size", type=int, default=30_000, help="Vocabulary size for expansion.")
     return parser.parse_args()
 
 
@@ -57,19 +55,9 @@ def initialize_model(
     tokenizer_path: str,
     model_to_initialize_from: str | None,
     model_dim: int | None,
-    additional_vocabulary: list[str] | None = None,
 ) -> SentenceTransformer:
     """Initialize the model."""
     tokenizer_model = TokenizerModel.from_pretrained(tokenizer_path)
-
-    if additional_vocabulary:
-        logger.info(f"Expanding vocabulary with {len(additional_vocabulary)} tokens.")
-        for token in additional_vocabulary:
-            try:
-                tokenizer_model.add_token_to_vocabulary(token)
-            except ValueError:
-                logger.warning(f"Token {token} already in vocabulary, skipping.")
-
     tokenizer = tokenizer_model.to_transformers()
 
     modules: list[Module] = []
@@ -203,12 +191,6 @@ if __name__ == "__main__":
 
     loss_function = select_loss(parsed_args.loss_function)
 
-    if parsed_args.vocab_dataset:
-        vocab_data = cast(Dataset, load_dataset(parsed_args.vocab_dataset, split="train"))
-        additional_vocab = vocab_data["token"][: parsed_args.vocab_size]
-    else:
-        additional_vocab = None
-
     if parsed_args.trained_model:
         if parsed_args.initialize_from_model:
             logger.warning(
@@ -225,7 +207,6 @@ if __name__ == "__main__":
             tokenizer_path=parsed_args.tokenizer_path,
             model_to_initialize_from=parsed_args.initialize_from_model,
             model_dim=model_dim,
-            additional_vocabulary=additional_vocab,
         )
     dataset, n_samples = get_datasets(
         paths=parsed_args.train_dataset,
