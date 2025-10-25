@@ -45,7 +45,7 @@ if __name__ == "__main__":
     datasets = []
     for data in parsed_args.vocabulary_data:
         datasets.append(cast(Dataset, load_dataset(data, split="train")))
-    dataset = concatenate_datasets(datasets)
+    dataset = concatenate_datasets(datasets).sort("document_frequency", reverse=True)
 
     old_vocab_size = tokenizer.get_vocab_size()
     original_vocab_counts = np.zeros(old_vocab_size, dtype=np.int32)
@@ -55,6 +55,13 @@ if __name__ == "__main__":
         for encoding in tokenized:
             counts = np.bincount(encoding.ids, minlength=old_vocab_size)
             original_vocab_counts += counts
+
+    vocab_to_remove = original_vocab_counts < parsed_args.min_subword_frequency
+
+    vocabulary = {index: token for token, index in tokenizer_model.vocabulary.items()}
+    for id in np.flatnonzero(vocab_to_remove):
+        token = vocabulary[id]
+        tokenizer_model.remove_token_from_vocabulary(token)
 
     vocab_to_remove = original_vocab_counts < parsed_args.min_subword_frequency
 
