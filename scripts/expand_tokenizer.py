@@ -63,13 +63,6 @@ if __name__ == "__main__":
         token = vocabulary[id]
         tokenizer_model.remove_token_from_vocabulary(token)
 
-    vocab_to_remove = original_vocab_counts < parsed_args.min_subword_frequency
-
-    vocabulary = {index: token for token, index in tokenizer_model.vocabulary.items()}
-    for id in np.flatnonzero(vocab_to_remove):
-        token = vocabulary[id]
-        tokenizer_model.remove_token_from_vocabulary(token)
-
     logger.info("Removed %d tokens from vocabulary.", np.sum(vocab_to_remove))
     n_tokens_to_add = parsed_args.vocab_size - tokenizer_model.vocabulary_size
     logger.info("Adding %d new tokens to vocabulary.", n_tokens_to_add)
