@@ -30,7 +30,7 @@ def _parse_args() -> Namespace:
     )
     parser.add_argument("--vocab-size", type=int, default=30000, help="New vocabulary size after expansion.")
     parser.add_argument(
-        "--min-subword-frequency", type=int, default=100, help="Minimum frequency for subwords to be included."
+        "--min-subword-frequency", type=int, default=10, help="Minimum frequency for subwords to be included."
     )
     parser.add_argument("--filter-numbers", action="store_true", help="Filter out tokens that are purely numeric.")
     return parser.parse_args()

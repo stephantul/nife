@@ -155,9 +155,9 @@ def _collect_parquet_shards(path_or_repo: Path) -> list[Path]:
     if path_or_repo.is_dir():
         shards = path_or_repo.glob("**/*.parquet")
     else:
-        api = HfApi()
-        local = Path(api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset"))
-        shards = local.glob("**/*.parquet")
+        api = HfApi()  # pragma: no cover
+        local = Path(api.snapshot_download(repo_id=path_or_repo.as_posix(), repo_type="dataset"))  # pragma: no cover
+        shards = local.glob("**/*.parquet")  # pragma: no cover
     return sorted(shards, key=lambda p: p.as_posix())
 
 
