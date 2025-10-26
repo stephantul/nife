@@ -2,6 +2,7 @@ import logging
 import re
 from argparse import ArgumentParser, Namespace
 from collections.abc import Iterator
+from pathlib import Path
 from typing import cast
 
 import numpy as np
@@ -20,7 +21,7 @@ def _parse_args() -> Namespace:
     """Parse command line arguments for expanding tokenizer vocabulary."""
     parser = ArgumentParser(description="Expand tokenizer vocabulary.")
     parser.add_argument("--tokenizer-name", type=str, required=True, help="Name of the tokenizer model.")
-    parser.add_argument("--output", type=str, required=True, help="Output path for the expanded tokenizer.")
+    parser.add_argument("--output-folder", type=str, required=True, help="Output folder for the expanded tokenizer.")
     parser.add_argument(
         "--vocabulary-data",
         type=str,
@@ -41,6 +42,13 @@ if __name__ == "__main__":
     parsed_args = _parse_args()
     tokenizer_model = TokenizerModel.from_pretrained(parsed_args.tokenizer_name)
     tokenizer = tokenizer_model.to_tokenizer()
+
+    tokenizer_name = parsed_args.tokenizer_name.replace("/", "-")
+    filtered_string = "filtered" if parsed_args.filter_numbers else "unfiltered"
+    tokenizer_name = f"{tokenizer_name}-{parsed_args.vocab_size}-{parsed_args.min_subword_frequency}-{filtered_string}"
+
+    output_path = Path(parsed_args.output_folder) / tokenizer_name
+    output_path.mkdir(parents=True, exist_ok=True)
 
     datasets = []
     for data in parsed_args.vocabulary_data:
@@ -79,4 +87,4 @@ if __name__ == "__main__":
         tokenizer_model.add_token_to_vocabulary(token)
         tokens_added += 1
 
-    tokenizer_model.to_transformers().save_pretrained(parsed_args.output)
+    tokenizer_model.to_transformers().save_pretrained(output_path)

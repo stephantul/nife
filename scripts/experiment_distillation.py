@@ -4,6 +4,7 @@ import random
 from typing import cast
 
 import torch
+import wandb
 from datasets import Dataset, IterableDataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
@@ -17,7 +18,6 @@ from sentence_transformers.models import Module, Normalize, Router
 from skeletoken import TokenizerModel
 from torch import nn
 
-import wandb
 from pystatic.data import get_datasets
 from pystatic.embedding import TrainableStaticEmbedding
 from pystatic.initialization.model import initialize_from_model
