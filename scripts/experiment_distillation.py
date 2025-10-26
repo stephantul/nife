@@ -48,6 +48,15 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument("--trained-model", type=str, help="Path to a trained model to continue training from.")
     parser.add_argument("--initialize-from-model", type=str, help="Path to a model to initialize from.")
     parser.add_argument("--loss-function", type=str, default="cosine", help="Loss function to use.")
+    parser.add_argument("--warmup", type=float, default=0.1, help="Warmup proportion for learning rate scheduler.")
+    parser.add_argument(
+        "--scheduler-type",
+        type=str,
+        default="cosine_warmup_with_min_lr",
+        help="Warmup type for learning rate scheduler.",
+    )
+    parser.add_argument("--weight-decay", type=float, default=0.01, help="Weight decay for optimizer.")
+    parser.add_argument("--max-grad-norm", type=float, default=1.0, help="Max gradient norm for clipping.")
     return parser.parse_args()
 
 
@@ -96,6 +105,10 @@ def run_experiment(
     epochs: int,
     use_matryoshka: bool,
     loss_function_name: str | LossFunction,
+    warmup_ratio: float,
+    lr_scheduler_type: str,
+    weight_decay: float,
+    max_grad_norm: float,
 ) -> None:
     """Run the distillation experiment."""
     # Workaround for local development
@@ -141,6 +154,10 @@ def run_experiment(
     total_steps = n_steps * epochs
 
     num_cycles = 0.5
+    if lr_scheduler_type == "cosine_warmup_with_min_lr":
+        lr_scheduler_kwargs = {"min_lr_rate": 0.10, "num_cycles": num_cycles}
+    else:
+        lr_scheduler_kwargs = None
 
     wandb.init(project="distillation", name=name)
     args = SentenceTransformerTrainingArguments(
@@ -151,8 +168,8 @@ def run_experiment(
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         learning_rate=learning_rate,
-        lr_scheduler_type="cosine_warmup_with_min_lr",
-        warmup_ratio=0.1,
+        lr_scheduler_type=lr_scheduler_type,
+        warmup_ratio=warmup_ratio,
         eval_strategy="steps",
         eval_steps=eval_step,
         save_strategy="steps",
@@ -162,13 +179,13 @@ def run_experiment(
         logging_first_step=True,
         run_name=name,
         report_to=["wandb"],
-        weight_decay=0.01,
+        weight_decay=weight_decay,
         load_best_model_at_end=False,
         dataloader_num_workers=n_workers,
         dataloader_prefetch_factor=prefetch_factor,
         dataloader_pin_memory=True,
-        lr_scheduler_kwargs={"min_lr_rate": 0.10, "num_cycles": num_cycles},
-        max_grad_norm=1.0,
+        lr_scheduler_kwargs=lr_scheduler_kwargs,
+        max_grad_norm=max_grad_norm,
     )
 
     trainer = SentenceTransformerTrainer(
@@ -224,6 +241,10 @@ if __name__ == "__main__":
         parsed_args.epochs,
         use_matryoshka=True,
         loss_function_name=parsed_args.loss_function,
+        warmup_ratio=parsed_args.warmup,
+        lr_scheduler_type=parsed_args.scheduler_type,
+        weight_decay=parsed_args.weight_decay,
+        max_grad_norm=parsed_args.max_grad_norm,
     )
 
     if parsed_args.initialize_from_model:
