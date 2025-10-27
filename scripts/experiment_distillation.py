@@ -186,6 +186,7 @@ def run_experiment(
         dataloader_pin_memory=True,
         lr_scheduler_kwargs=lr_scheduler_kwargs,
         max_grad_norm=max_grad_norm,
+        metric_for_best_model="eval_NanoBEIR_mean_cosine_ndcg@10",
     )
 
     trainer = SentenceTransformerTrainer(
