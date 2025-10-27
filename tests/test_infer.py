@@ -66,7 +66,8 @@ def test_generate_and_save_embeddings(mock_build_shards, mock_generate_embedding
     mock_model = MagicMock()
     records = iter([{"text": "example1"}, {"text": "example2"}])
     with TemporaryDirectory() as temp_dir:
-        generate_and_save_embeddings(mock_model, temp_dir, records)
+        # generate_and_save_embeddings signature requires model_name and dataset_name now
+        generate_and_save_embeddings(mock_model, "mock-model", "mock-dataset", temp_dir, records)
 
         # Ensure _generate_embeddings and build_parquet_shards_from_folder are called
         mock_generate_embeddings.assert_called()

@@ -1525,6 +1525,7 @@ name = "pystatic"
 source = { editable = "." }
 dependencies = [
     { name = "datasets" },
+    { name = "jinja2" },
     { name = "numpy" },
     { name = "sentence-transformers" },
     { name = "skeletoken" },
@@ -1546,6 +1547,7 @@ dev = [
 requires-dist = [
     { name = "datasets" },
     { name = "ipython", marker = "extra == 'dev'" },
+    { name = "jinja2" },
     { name = "mypy", marker = "extra == 'dev'" },
     { name = "numpy" },
     { name = "pre-commit", marker = "extra == 'dev'" },

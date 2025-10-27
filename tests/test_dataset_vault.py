@@ -143,7 +143,7 @@ def mock_load_dataset(*args: str, **kwargs: str) -> Dataset:
 def test_english_words_definitions_dataset(mock_load) -> None:
     """Test the English words definitions dataset."""
     name, dataset = english_words_definitions_dataset()
-    assert name == "english-words-definitions"
+    assert name == "MongoDB/english-words-definitions"
     assert list(dataset) == [
         {"definitions": ["mocked definition 1"], "text": "mocked definition 1"},
         {"definitions": ["mocked definition 2"], "text": "mocked definition 2"},
@@ -154,7 +154,7 @@ def test_english_words_definitions_dataset(mock_load) -> None:
 def test_fineweb_dataset(mock_load) -> None:
     """Test the FineWeb dataset."""
     name, dataset = fineweb_dataset()
-    assert name == "fineweb"
+    assert name == "HuggingFaceFW/fineweb"
     assert list(dataset) == [{"text": "mocked text 1"}, {"text": "mocked text 2"}]
 
 
@@ -162,7 +162,7 @@ def test_fineweb_dataset(mock_load) -> None:
 def test_gooaq_dataset(mock_load) -> None:
     """Test the GooAQ dataset."""
     name, dataset = gooaq_dataset()
-    assert name == "gooaq"
+    assert name == "sentence-transformers/gooaq"
     assert list(dataset) == [{"text": "mocked question 1"}, {"text": "mocked question 2"}]
 
 
@@ -170,7 +170,7 @@ def test_gooaq_dataset(mock_load) -> None:
 def test_miracl_dataset(mock_load) -> None:
     """Test the MIRACL dataset."""
     name, dataset = miracl_dataset()
-    assert name == "miracl"
+    assert name == "sentence-transformers/miracl"
     assert list(dataset) == [{"text": "mocked anchor 1"}, {"text": "mocked anchor 2"}]
 
 
@@ -178,7 +178,7 @@ def test_miracl_dataset(mock_load) -> None:
 def test_lotte_queries_dataset(mock_load) -> None:
     """Test the LOTTE queries dataset."""
     name, dataset = lotte_queries_dataset()
-    assert name == "lotte"
+    assert name == "mteb/lotte"
     assert list(dataset)[:2] == [{"text": "mocked text 1"}, {"text": "mocked text 2"}]
 
 
@@ -186,7 +186,7 @@ def test_lotte_queries_dataset(mock_load) -> None:
 def test_snli_dataset(mock_load) -> None:
     """Test the SNLI dataset."""
     name, dataset = snli_dataset()
-    assert name == "snli"
+    assert name == "stanfordnlp/snli"
     assert list(dataset) == [
         {"text": "mocked premise 1"},
         {"text": "mocked hypothesis 1"},
@@ -220,7 +220,7 @@ def test_get_all_datasets(mock_get_all_datasets) -> None:
 def test_paws_dataset(mock_load) -> None:
     """Test `paws_dataset` returns sentence1 and sentence2 items as text entries."""
     name, dataset = paws_dataset()
-    assert name == "paws"
+    assert name == "google-research-datasets/paws"
     # PAWS appends sentence1 then sentence2 for each record
     assert list(dataset) == [
         {"text": "mocked sentence 1"},
@@ -234,7 +234,7 @@ def test_paws_dataset(mock_load) -> None:
 def test_squad_dataset(mock_load) -> None:
     """Test `squad_dataset` exposes the `question` field as text entries."""
     name, dataset = squad_dataset()
-    assert name == "squad"
+    assert name == "sentence-transformers/squad"
     assert list(dataset) == [{"text": "mocked question 1"}, {"text": "mocked question 2"}]
 
 
@@ -242,7 +242,7 @@ def test_squad_dataset(mock_load) -> None:
 def test_mldr_dataset(mock_load) -> None:
     """Test `mldr_dataset` returns anchor fields as text entries via the helper."""
     name, dataset = mldr_dataset()
-    assert name == "mldr"
+    assert name == "sentence-transformers/mldr"
     assert list(dataset) == [{"text": "mocked mldr anchor 1"}, {"text": "mocked mldr anchor 2"}]
 
 
@@ -250,11 +250,11 @@ def test_mldr_dataset(mock_load) -> None:
 def test_msmarco_and_docs_datasets(mock_load) -> None:
     """Test MS MARCO query and document dataset helpers return expected text entries."""
     nq_name, nq_dataset = msmarco_queries_dataset()
-    assert nq_name == "msmarco"
+    assert nq_name == "sentence-transformers/msmarco-corpus"
     assert list(nq_dataset) == [{"text": "mocked query 1"}, {"text": "mocked query 2"}]
 
     nd_name, nd_dataset = msmarco_docs_dataset()
-    assert nd_name == "msmarco_docs"
+    assert nd_name == "sentence-transformers/msmarco-corpus"
     assert list(nd_dataset) == [{"text": "mocked doc 1"}, {"text": "mocked doc 2"}]
 
 
@@ -266,20 +266,20 @@ def test_pubmed_and_swim_trivia_mr_tydi(mock_load) -> None:
     This ensures column renaming and `_simple_text_field_dataset` usage behave as expected.
     """
     p_name, p_dataset = pubmed_dataset()
-    assert p_name == "PubMedQA"
+    assert p_name == "qiaojin/PubMedQA"
     # pubmed_dataset renames 'question' to 'text'
     assert list(p_dataset)[:2] == [{"text": "mocked abstract 1"}, {"text": "mocked abstract 2"}]
 
     s_name, s_dataset = swim_ir_dataset()
-    assert s_name == "swim-ir"
+    assert s_name == "sentence-transformers/swim-ir"
     assert list(s_dataset) == [{"text": "mocked swim query 1"}, {"text": "mocked swim query 2"}]
 
     t_name, t_dataset = triviaqa_dataset()
-    assert t_name == "trivia_qa"
+    assert t_name == "mandarjoshi/trivia_qa"
     assert list(t_dataset) == [{"text": "mocked trivia q1"}, {"text": "mocked trivia q2"}]
 
     m_name, m_dataset = mr_tydi_dataset()
-    assert m_name == "mr-tydi"
+    assert m_name == "sentence-transformers/mr-tydi"
     assert list(m_dataset) == [{"text": "mocked mr-tydi anchor 1"}, {"text": "mocked mr-tydi anchor 2"}]
 
 

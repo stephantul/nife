@@ -4,7 +4,7 @@ from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 
-from pystatic.dataset_vault import get_all_dataset_functions
+from pystatic.dataset_vault import get_all_dataset_functions, short_dataset_name
 from pystatic.distillation.infer import generate_and_save_embeddings
 
 
@@ -100,7 +100,10 @@ def main() -> None:
         dataset_func = dataset_functions[dataset_name]
         actual_name, dataset_iterator = dataset_func()
 
-        converted_dir = Path(args.converted_base_dir) / safe_model_name / actual_name
+        # actual_name now contains the full HF hub path; derive the last path segment for local saving
+        short_name = short_dataset_name(actual_name)
+
+        converted_dir = Path(args.converted_base_dir) / safe_model_name / short_name
         converted_dir.mkdir(parents=True, exist_ok=True)
         generate_and_save_embeddings(
             model=model,
@@ -110,6 +113,8 @@ def main() -> None:
             batch_size=args.batch_size,
             save_every=args.save_every,
             max_length=args.max_length,
+            model_name=args.model_name,
+            dataset_name=short_name,
         )
 
 

@@ -13,6 +13,8 @@ from datasets import Sequence as DatasetSequenceFeature
 from huggingface_hub import HfApi
 from tqdm import tqdm
 
+from pystatic.dataset_card import generate_dataset_card
+
 
 def _pair_stream(
     txt_path: Path,
@@ -59,6 +61,8 @@ def build_parquet_shards_from_folder(
     out_dir: str | Path,
     *,
     rows_per_shard: int = 100_000,
+    model_name: str = "unknown-model",
+    dataset_name: str = "unknown-dataset",
 ) -> None:
     """Stream over (text, embedding) pairs and write sharded parquet files to disk."""
     path = Path(path)
@@ -114,6 +118,14 @@ def build_parquet_shards_from_folder(
 
     # Flush remainder
     _flush_buffer()
+
+    generate_dataset_card(
+        model_name=model_name,
+        dataset_name=dataset_name,
+        length=D,
+        size=rows_emitted,
+        size_kind="examples",
+    )
 
 
 def _post_process_dataset(dataset: Dataset | IterableDataset, to_keep: set[str]) -> Dataset | IterableDataset:

@@ -162,6 +162,8 @@ def _generate_embeddings(
 
 def generate_and_save_embeddings(
     model: SentenceTransformer,
+    model_name: str,
+    dataset_name: str,
     output_folder: str | Path,
     records: Iterator[dict[str, str]],
     limit_batches: int | None = None,
@@ -182,5 +184,5 @@ def generate_and_save_embeddings(
         )
 
         logger.info("Converting dataset to shards...")
-        build_parquet_shards_from_folder(dir_name, output_folder)
+        build_parquet_shards_from_folder(dir_name, output_folder, model_name=model_name, dataset_name=dataset_name)
         logger.info(f"Converted dataset saved to {output_folder}")

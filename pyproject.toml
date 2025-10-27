@@ -12,6 +12,7 @@ dependencies = [
     "datasets",
     "skeletoken @ git+https://github.com/stephantul/skeletoken.git",
     "wandb",
+    "jinja2",
 ]
 
 [build-system]

@@ -23,8 +23,9 @@ def _simple_text_field_dataset(
 
 def english_words_definitions_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the English Words Definitions dataset."""
-    name = "english-words-definitions"
-    dataset = cast(Dataset, load_dataset("MongoDB/english-words-definitions", split="train"))
+    # return the full HF hub path so callers have the original identifier
+    name = "MongoDB/english-words-definitions"
+    dataset = cast(Dataset, load_dataset(name, split="train"))
     dataset = dataset.map(lambda x: {"text": " ".join(x["definitions"])})
     dataset = dataset.filter(lambda x: len(x["text"].strip()) > 0)
     dataset_iterator = cast(Iterator[dict[str, str]], iter(dataset))
@@ -34,22 +35,24 @@ def english_words_definitions_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def fineweb_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the FineWeb dataset (returns first path only)."""
-    name = "fineweb"
+    name = "HuggingFaceFW/fineweb"
     data = cast(
         Iterator[dict[str, str]],
-        load_dataset("HuggingFaceFW/fineweb", "sample-10BT", streaming=True, split="train"),
+        load_dataset(name, "sample-10BT", streaming=True, split="train"),
     )
     return name, iter(data)
 
 
 def gooaq_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the GoOAQ dataset."""
-    return "gooaq", _simple_text_field_dataset(huggingface_name="sentence-transformers/gooaq", text_field="question")
+    return "sentence-transformers/gooaq", _simple_text_field_dataset(
+        huggingface_name="sentence-transformers/gooaq", text_field="question"
+    )
 
 
 def miracl_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MIRACL dataset."""
-    return "miracl", _simple_text_field_dataset(
+    return "sentence-transformers/miracl", _simple_text_field_dataset(
         huggingface_name="sentence-transformers/miracl", text_field="anchor", config="en-triplet"
     )
 
@@ -75,13 +78,13 @@ def lotte_queries_dataset() -> tuple[str, Iterator[dict[str, str]]]:
         big_dataset.append(dataset)
     final_dataset: Dataset = concatenate_datasets(big_dataset)
     dataset_iterator = cast(Iterator[dict[str, str]], iter(final_dataset))
-    return "lotte", dataset_iterator
+    return "mteb/lotte", dataset_iterator
 
 
 def snli_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the SNLI dataset."""
-    name = "snli"
-    dataset = cast(Dataset, load_dataset("stanfordnlp/snli", split="train"))
+    name = "stanfordnlp/snli"
+    dataset = cast(Dataset, load_dataset(name, split="train"))
 
     seen = set()
     new_records: list[dict[str, str]] = []
@@ -101,8 +104,8 @@ def snli_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def paws_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the PAWS dataset."""
-    name = "paws"
-    dataset = load_dataset("google-research-datasets/paws", "unlabeled_final", split="train")
+    name = "google-research-datasets/paws"
+    dataset = load_dataset(name, "unlabeled_final", split="train")
 
     new_records = []
     for record in cast(Iterable[dict[str, str]], dataset):
@@ -117,19 +120,21 @@ def paws_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def squad_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the SQuAD dataset."""
-    return "squad", _simple_text_field_dataset(huggingface_name="sentence-transformers/squad", text_field="question")
+    return "sentence-transformers/squad", _simple_text_field_dataset(
+        huggingface_name="sentence-transformers/squad", text_field="question"
+    )
 
 
 def mldr_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MLDR dataset."""
-    return "mldr", _simple_text_field_dataset(
+    return "sentence-transformers/mldr", _simple_text_field_dataset(
         huggingface_name="sentence-transformers/mldr", text_field="anchor", config="en-triplet"
     )
 
 
 def msmarco_queries_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MS MARCO queries dataset."""
-    return "msmarco", _simple_text_field_dataset(
+    return "sentence-transformers/msmarco-corpus", _simple_text_field_dataset(
         huggingface_name="sentence-transformers/msmarco-corpus",
         text_field="text",
         config="query",
@@ -138,7 +143,7 @@ def msmarco_queries_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def msmarco_docs_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MS MARCO documents dataset."""
-    return "msmarco_docs", _simple_text_field_dataset(
+    return "sentence-transformers/msmarco-corpus", _simple_text_field_dataset(
         huggingface_name="sentence-transformers/msmarco-corpus",
         text_field="text",
         config="passage",
@@ -147,11 +152,11 @@ def msmarco_docs_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def pubmed_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the PubMedQA dataset."""
-    name = "PubMedQA"
+    name = "qiaojin/PubMedQA"
     subsets = ["pqa_artificial", "pqa_unlabeled"]
     datasets = []
     for subset in subsets:
-        dataset = cast(Dataset, load_dataset("qiaojin/PubMedQA", subset, split="train"))
+        dataset = cast(Dataset, load_dataset(name, subset, split="train"))
         dataset = dataset.rename_columns({"question": "text"})
         columns_to_remove = [col for col in dataset.column_names if col not in ("text",)]
         dataset = dataset.remove_columns(columns_to_remove)
@@ -164,7 +169,7 @@ def pubmed_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def swim_ir_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the SWIM-IR dataset."""
-    return "swim-ir", _simple_text_field_dataset(
+    return "sentence-transformers/swim-ir", _simple_text_field_dataset(
         huggingface_name="sentence-transformers/swim-ir",
         text_field="query",
         config="en",
@@ -173,8 +178,8 @@ def swim_ir_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def triviaqa_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the TriviaQA dataset."""
-    name = "trivia_qa"
-    dataset = cast(Dataset, load_dataset("mandarjoshi/trivia_qa", "unfiltered.nocontext", split="train"))
+    name = "mandarjoshi/trivia_qa"
+    dataset = cast(Dataset, load_dataset(name, "unfiltered.nocontext", split="train"))
     dataset = dataset.rename_columns({"question": "text"})
     columns_to_remove = [col for col in dataset.column_names if col not in ("text",)]
     dataset = dataset.remove_columns(columns_to_remove)
@@ -184,7 +189,7 @@ def triviaqa_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def mr_tydi_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the Mr. TyDi dataset."""
-    return "mr-tydi", _simple_text_field_dataset(
+    return "sentence-transformers/mr-tydi", _simple_text_field_dataset(
         huggingface_name="sentence-transformers/mr-tydi",
         text_field="anchor",
         config="en-triplet",
@@ -210,3 +215,25 @@ def get_all_dataset_functions() -> dict[str, Callable[[], tuple[str, Iterator[di
         "trivia_qa": triviaqa_dataset,
         "mr-tydi": mr_tydi_dataset,
     }
+
+
+def short_dataset_name(hf_name: str) -> str:
+    """
+    Return the short dataset name from a HF hub identifier.
+
+    Examples:
+        - 'MongoDB/english-words-definitions' -> 'english-words-definitions'
+        - 'msmarco' -> 'msmarco'
+
+    This centralizes the logic for deriving local filenames from full HF paths.
+
+    Args:
+        hf_name: Full HF dataset identifier.
+
+    Returns:
+        Short dataset name.
+
+    """
+    if not hf_name:
+        return hf_name
+    return hf_name.split("/")[-1]
