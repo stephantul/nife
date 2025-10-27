@@ -98,10 +98,10 @@ def main() -> None:
 
         # Get dataset
         dataset_func = dataset_functions[dataset_name]
-        actual_name, dataset_iterator = dataset_func()
+        full_name, dataset_iterator = dataset_func()
 
         # actual_name now contains the full HF hub path; derive the last path segment for local saving
-        short_name = short_dataset_name(actual_name)
+        short_name = short_dataset_name(full_name)
 
         converted_dir = Path(args.converted_base_dir) / safe_model_name / short_name
         converted_dir.mkdir(parents=True, exist_ok=True)
@@ -114,7 +114,7 @@ def main() -> None:
             save_every=args.save_every,
             max_length=args.max_length,
             model_name=args.model_name,
-            dataset_name=short_name,
+            dataset_name=full_name,
         )
 
 
