@@ -137,6 +137,13 @@ def build_parquet_shards_from_folder(
     with open(out_dir / "README.md", "w", encoding="utf-8") as f:
         f.write(readme)
 
+    # Also write a small metadata.json next to the README so callers (or hf_hub_download)
+    # can easily discover which model produced this converted dataset and the full
+    # HF dataset identifier used during conversion.
+    meta = {"model_name": model_name, "dataset_name": dataset_name}
+    with open(out_dir / "metadata.json", "w", encoding="utf-8") as f:
+        json.dump(meta, f, indent=2, ensure_ascii=False)
+
 
 def _post_process_dataset(dataset: Dataset | IterableDataset, to_keep: set[str]) -> Dataset | IterableDataset:
     # Rename only if the source exists and the target is kept.
