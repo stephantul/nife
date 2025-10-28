@@ -126,6 +126,16 @@ def build_parquet_shards_from_folder(
         size=rows_emitted,
         size_kind="examples",
     )
+    # Also write the dataset card to README.md in the output folder so HF metadata is available
+    readme = generate_dataset_card(
+        model_name=model_name,
+        dataset_name=dataset_name,
+        length=D,
+        size=rows_emitted,
+        size_kind="examples",
+    )
+    with open(out_dir / "README.md", "w", encoding="utf-8") as f:
+        f.write(readme)
 
 
 def _post_process_dataset(dataset: Dataset | IterableDataset, to_keep: set[str]) -> Dataset | IterableDataset:

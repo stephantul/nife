@@ -24,6 +24,9 @@ configs:
   data_files:
   - split: train
     path: data/train-*
+metadata:
+  model_name: {{ model_name }}
+  dataset_name: {{ dataset_name }}
 ---
 
 # Embedpress: {{ model_name }} on the {{ dataset_name }} dataset
