@@ -45,16 +45,14 @@ def fineweb_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def gooaq_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the GoOAQ dataset."""
-    return "sentence-transformers/gooaq", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/gooaq", text_field="question"
-    )
+    hf = "sentence-transformers/gooaq"
+    return hf, _simple_text_field_dataset(hf, text_field="question")
 
 
 def miracl_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MIRACL dataset."""
-    return "sentence-transformers/miracl", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/miracl", text_field="anchor", config="en-triplet"
-    )
+    hf = "sentence-transformers/miracl"
+    return hf, _simple_text_field_dataset(hf, text_field="anchor", config="en-triplet")
 
 
 def lotte_queries_dataset() -> tuple[str, Iterator[dict[str, str]]]:
@@ -120,34 +118,26 @@ def paws_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def squad_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the SQuAD dataset."""
-    return "sentence-transformers/squad", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/squad", text_field="question"
-    )
+    hf = "sentence-transformers/squad"
+    return hf, _simple_text_field_dataset(hf, text_field="question")
 
 
 def mldr_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MLDR dataset."""
-    return "sentence-transformers/mldr", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/mldr", text_field="anchor", config="en-triplet"
-    )
+    hf = "sentence-transformers/mldr"
+    return hf, _simple_text_field_dataset(hf, text_field="anchor", config="en-triplet")
 
 
 def msmarco_queries_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MS MARCO queries dataset."""
-    return "sentence-transformers/msmarco-corpus", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/msmarco-corpus",
-        text_field="text",
-        config="query",
-    )
+    hf = "sentence-transformers/msmarco-corpus"
+    return hf, _simple_text_field_dataset(hf, text_field="text", config="query")
 
 
 def msmarco_docs_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the MS MARCO documents dataset."""
-    return "sentence-transformers/msmarco-corpus", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/msmarco-corpus",
-        text_field="text",
-        config="passage",
-    )
+    hf = "sentence-transformers/msmarco-corpus"
+    return hf, _simple_text_field_dataset(hf, text_field="text", config="passage")
 
 
 def pubmed_dataset() -> tuple[str, Iterator[dict[str, str]]]:
@@ -169,11 +159,8 @@ def pubmed_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def swim_ir_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the SWIM-IR dataset."""
-    return "sentence-transformers/swim-ir", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/swim-ir",
-        text_field="query",
-        config="en",
-    )
+    hf = "nthakur/swim-ir-monolingual"
+    return hf, _simple_text_field_dataset(hf, text_field="query", config="en")
 
 
 def triviaqa_dataset() -> tuple[str, Iterator[dict[str, str]]]:
@@ -189,11 +176,8 @@ def triviaqa_dataset() -> tuple[str, Iterator[dict[str, str]]]:
 
 def mr_tydi_dataset() -> tuple[str, Iterator[dict[str, str]]]:
     """Get the Mr. TyDi dataset."""
-    return "sentence-transformers/mr-tydi", _simple_text_field_dataset(
-        huggingface_name="sentence-transformers/mr-tydi",
-        text_field="anchor",
-        config="en-triplet",
-    )
+    hf = "sentence-transformers/mr-tydi"
+    return hf, _simple_text_field_dataset(hf, text_field="anchor", config="en-triplet")
 
 
 def get_all_dataset_functions() -> dict[str, Callable[[], tuple[str, Iterator[dict[str, str]]]]]:

@@ -122,7 +122,7 @@ def mock_load_dataset(*args: str, **kwargs: str) -> Dataset:
         "mldr": _ds_mldr,
         "qiaojin/PubMedQA": _ds_pubmed,
         "PubMedQA": _ds_pubmed,
-        "sentence-transformers/swim-ir": _ds_swim_ir,
+        "nthakur/swim-ir-monolingual": _ds_swim_ir,
         "swim-ir": _ds_swim_ir,
         "mandarjoshi/trivia_qa": _ds_triviaqa,
         "trivia_qa": _ds_triviaqa,
@@ -271,7 +271,7 @@ def test_pubmed_and_swim_trivia_mr_tydi(mock_load) -> None:
     assert list(p_dataset)[:2] == [{"text": "mocked abstract 1"}, {"text": "mocked abstract 2"}]
 
     s_name, s_dataset = swim_ir_dataset()
-    assert s_name == "sentence-transformers/swim-ir"
+    assert s_name == "nthakur/swim-ir-monolingual"
     assert list(s_dataset) == [{"text": "mocked swim query 1"}, {"text": "mocked swim query 2"}]
 
     t_name, t_dataset = triviaqa_dataset()
