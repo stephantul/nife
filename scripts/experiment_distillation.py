@@ -126,9 +126,12 @@ def run_experiment(
     if use_matryoshka:
         emb_dim = model.get_sentence_embedding_dimension()
         assert emb_dim is not None
-        dims = [emb_dim]
-        while dims[-1] > 32:
-            dims.append(dims[-1] // 2)
+        dims = [16]
+        new_dim = dims[-1]
+        while new_dim * 2 < emb_dim:
+            new_dim *= 2
+            dims.append(new_dim)
+        dims.append(emb_dim)
         loss = MatryoshkaLoss(model, loss, matryoshka_dims=dims)
 
     evaluators: list[SentenceEvaluator] = []
