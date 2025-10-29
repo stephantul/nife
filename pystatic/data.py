@@ -271,3 +271,27 @@ def get_datasets(
 
     dataset = _post_process_dataset(ds, to_keep=columns_to_keep)
     return dataset, length
+
+
+def get_model_name_from_datasets(datasets: list[str]) -> str | None:
+    """Get a model name based on the datasets."""
+    model_names = set()
+    for dataset in datasets:
+        dataset_path = Path(dataset)
+        file_name: str | Path
+        if dataset_path.is_dir():
+            file_name = dataset_path / "metadata.json"
+            if not file_name.exists():
+                continue
+        else:
+            api = HfApi()
+            try:
+                file_name = api.hf_hub_download(repo_id=dataset, repo_type="dataset", filename="metadata.json")
+            except Exception:
+                continue
+        with open(file_name, "r", encoding="utf-8") as f:
+            metadata = json.load(f)
+            model_names.add(metadata.get("model_name"))
+    if len(model_names) > 1:
+        raise ValueError(f"Multiple base models found: {model_names}")
+    return next(iter(model_names))

@@ -18,7 +18,7 @@ from sentence_transformers.models import Module, Normalize, Router
 from skeletoken import TokenizerModel
 from torch import nn
 
-from pystatic.data import get_datasets
+from pystatic.data import get_datasets, get_model_name_from_datasets
 from pystatic.embedding import TrainableStaticEmbedding
 from pystatic.initialization.model import initialize_from_model
 from pystatic.losses import LossFunction, select_loss
@@ -209,6 +209,11 @@ if __name__ == "__main__":
 
     loss_function = select_loss(parsed_args.loss_function)
 
+    model_name = get_model_name_from_datasets(parsed_args.dataset)
+    if model_name is None:
+        logger.info("Could not determine model name from datasets.")
+        model_name = parsed_args.initialize_from_model
+
     if parsed_args.trained_model:
         if parsed_args.initialize_from_model:
             logger.warning(
@@ -223,7 +228,7 @@ if __name__ == "__main__":
     else:
         model = _create_model(
             tokenizer_path=parsed_args.tokenizer_path,
-            model_to_initialize_from=parsed_args.initialize_from_model,
+            model_to_initialize_from=model_name,
             model_dim=model_dim,
         )
     dataset, n_samples = get_datasets(
@@ -248,8 +253,7 @@ if __name__ == "__main__":
         max_grad_norm=parsed_args.max_grad_norm,
     )
 
-    if parsed_args.initialize_from_model:
-        model_name = parsed_args.initialize_from_model
+    if model_name is not None:
         big_model = SentenceTransformer(model_name)
 
         router = Router.for_query_document(query_modules=[model], document_modules=[big_model])  # type: ignore
