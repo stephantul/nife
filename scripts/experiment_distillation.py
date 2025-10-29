@@ -209,7 +209,7 @@ if __name__ == "__main__":
 
     loss_function = select_loss(parsed_args.loss_function)
 
-    model_name = get_model_name_from_datasets(parsed_args.dataset)
+    model_name = get_model_name_from_datasets(parsed_args.train_dataset)
     if model_name is None:
         logger.info("Could not determine model name from datasets.")
         model_name = parsed_args.initialize_from_model
