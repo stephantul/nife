@@ -14,7 +14,7 @@ from sentence_transformers import (
 )
 from sentence_transformers.evaluation import EmbeddingSimilarityEvaluator, NanoBEIREvaluator, SentenceEvaluator
 from sentence_transformers.losses import MatryoshkaLoss
-from sentence_transformers.models import Module, Normalize, Router
+from sentence_transformers.models import Module, Normalize, Router, StaticEmbedding
 from skeletoken import TokenizerModel
 from torch import nn
 
@@ -201,7 +201,13 @@ def run_experiment(
     )
     trainer.train()
 
-    model.save_pretrained(f"models/{name}/final")
+    static_module: TrainableStaticEmbedding = model[0]  # type: ignore
+    new_static_model = StaticEmbedding(
+        tokenizer=static_module.tokenizer,
+        embedding_weights=static_module.embedding.weight.data.cpu().numpy(),
+    )
+    new_model = SentenceTransformer(modules=[new_static_model, Normalize()])
+    new_model.save_pretrained(f"models/{name}/final")
 
 
 if __name__ == "__main__":
