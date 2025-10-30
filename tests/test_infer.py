@@ -48,7 +48,7 @@ def test_write_data() -> None:
         assert (path / "texts_0000.txt").exists()
 
 
-@patch("pystatic.distillation.infer._write_data")
+@patch("nife.distillation.infer._write_data")
 def test_generate_embeddings(mock_write_data, test_model: SentenceTransformer) -> None:
     """Test the _generate_embeddings function."""
     records = iter([{"text": "example1"}, {"text": "example2"}])
@@ -59,8 +59,8 @@ def test_generate_embeddings(mock_write_data, test_model: SentenceTransformer) -
         mock_write_data.assert_called()
 
 
-@patch("pystatic.distillation.infer._generate_embeddings")
-@patch("pystatic.distillation.infer.build_parquet_shards_from_folder")
+@patch("nife.distillation.infer._generate_embeddings")
+@patch("nife.distillation.infer.build_parquet_shards_from_folder")
 def test_generate_and_save_embeddings(mock_build_shards, mock_generate_embeddings) -> None:
     """Test the generate_and_save_embeddings function."""
     mock_model = MagicMock()
@@ -74,7 +74,7 @@ def test_generate_and_save_embeddings(mock_build_shards, mock_generate_embedding
         mock_build_shards.assert_called()
 
 
-@patch("pystatic.distillation.infer._write_data")
+@patch("nife.distillation.infer._write_data")
 def test_generate_embeddings_with_max_length_and_limit(mock_write_data, test_model: SentenceTransformer) -> None:
     """Ensure _generate_embeddings handles max_length > model max and limit_batches/save_every branches."""
     records = iter([{"text": "example1"}, {"text": "example2"}])
@@ -90,7 +90,7 @@ def test_generate_embeddings_with_max_length_and_limit(mock_write_data, test_mod
         assert test_model.max_seq_length == 512
 
 
-@patch("pystatic.distillation.infer.logger.warning")
+@patch("nife.distillation.infer.logger.warning")
 def test_generate_embeddings_warns_when_max_length_too_large(mock_warning, test_model: SentenceTransformer) -> None:
     """Trigger the warning when requested max_length is larger than the model's original max length."""
     test_model.max_seq_length = 10
@@ -100,8 +100,8 @@ def test_generate_embeddings_warns_when_max_length_too_large(mock_warning, test_
     mock_warning.assert_called()
 
 
-@patch("pystatic.distillation.infer._write_data")
-@patch("pystatic.distillation.infer._tokenize")
+@patch("nife.distillation.infer._write_data")
+@patch("nife.distillation.infer._tokenize")
 def test_generate_embeddings_limit_batches_logs_and_writes(mock_tokenize, mock_write_data) -> None:
     """Ensure limit_batches triggers info log and causes a final write of accumulated records."""
     mock_model = MagicMock()
