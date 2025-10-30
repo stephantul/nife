@@ -139,7 +139,7 @@ def mock_load_dataset(*args: str, **kwargs: str) -> Dataset:
     return _ds_simple_text()
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_english_words_definitions_dataset(mock_load) -> None:
     """Test the English words definitions dataset."""
     name, hf, dataset = english_words_definitions_dataset()
@@ -151,7 +151,7 @@ def test_english_words_definitions_dataset(mock_load) -> None:
     ]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_fineweb_dataset(mock_load) -> None:
     """Test the FineWeb dataset."""
     name, hf, dataset = fineweb_dataset()
@@ -160,7 +160,7 @@ def test_fineweb_dataset(mock_load) -> None:
     assert list(dataset) == [{"text": "mocked text 1"}, {"text": "mocked text 2"}]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_gooaq_dataset(mock_load) -> None:
     """Test the GooAQ dataset."""
     name, hf, dataset = gooaq_dataset()
@@ -169,7 +169,7 @@ def test_gooaq_dataset(mock_load) -> None:
     assert list(dataset) == [{"text": "mocked question 1"}, {"text": "mocked question 2"}]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_miracl_dataset(mock_load) -> None:
     """Test the MIRACL dataset."""
     name, hf, dataset = miracl_dataset()
@@ -178,7 +178,7 @@ def test_miracl_dataset(mock_load) -> None:
     assert list(dataset) == [{"text": "mocked anchor 1"}, {"text": "mocked anchor 2"}]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_lotte_queries_dataset(mock_load) -> None:
     """Test the LOTTE queries dataset."""
     name, hf, dataset = lotte_queries_dataset()
@@ -187,7 +187,7 @@ def test_lotte_queries_dataset(mock_load) -> None:
     assert list(dataset)[:2] == [{"text": "mocked text 1"}, {"text": "mocked text 2"}]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_snli_dataset(mock_load) -> None:
     """Test the SNLI dataset."""
     name, hf, dataset = snli_dataset()
@@ -201,7 +201,7 @@ def test_snli_dataset(mock_load) -> None:
     ]
 
 
-@patch("pystatic.dataset_vault.get_all_datasets", create=True)
+@patch("nife.dataset_vault.get_all_datasets", create=True)
 def test_get_all_datasets(mock_get_all_datasets) -> None:
     """Test the get_all_datasets function."""
     mock_get_all_datasets.return_value = [
@@ -222,7 +222,7 @@ def test_get_all_datasets(mock_get_all_datasets) -> None:
     assert datasets == mock_get_all_datasets.return_value
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_paws_dataset(mock_load) -> None:
     """Test `paws_dataset` returns sentence1 and sentence2 items as text entries."""
     name, hf, dataset = paws_dataset()
@@ -237,7 +237,7 @@ def test_paws_dataset(mock_load) -> None:
     ]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_squad_dataset(mock_load) -> None:
     """Test `squad_dataset` exposes the `question` field as text entries."""
     name, hf, dataset = squad_dataset()
@@ -246,7 +246,7 @@ def test_squad_dataset(mock_load) -> None:
     assert list(dataset) == [{"text": "mocked question 1"}, {"text": "mocked question 2"}]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_mldr_dataset(mock_load) -> None:
     """Test `mldr_dataset` returns anchor fields as text entries via the helper."""
     name, hf, dataset = mldr_dataset()
@@ -255,7 +255,7 @@ def test_mldr_dataset(mock_load) -> None:
     assert list(dataset) == [{"text": "mocked mldr anchor 1"}, {"text": "mocked mldr anchor 2"}]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_msmarco_and_docs_datasets(mock_load) -> None:
     """Test MS MARCO query and document dataset helpers return expected text entries."""
     nq_name, nq_hf, nq_dataset = msmarco_queries_dataset()
@@ -269,7 +269,7 @@ def test_msmarco_and_docs_datasets(mock_load) -> None:
     assert list(nd_dataset) == [{"text": "mocked doc 1"}, {"text": "mocked doc 2"}]
 
 
-@patch("pystatic.dataset_vault.load_dataset", side_effect=mock_load_dataset)
+@patch("nife.dataset_vault.load_dataset", side_effect=mock_load_dataset)
 def test_pubmed_and_swim_trivia_mr_tydi(mock_load) -> None:
     """
     Test PubMedQA, SWIM-IR, TriviaQA and Mr. TyDi dataset helpers.

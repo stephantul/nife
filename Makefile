@@ -3,4 +3,4 @@ install:
 	uv run pre-commit install
 
 test:
-	uv run pytest --cov=pystatic --cov-report=term-missing
+	uv run pytest --cov=nife --cov-report=term-missing
