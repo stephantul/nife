@@ -11,8 +11,8 @@ from sentence_transformers import SentenceTransformer
 from tqdm import tqdm
 from transformers import BatchEncoding, PreTrainedTokenizer
 
-from pystatic.data import build_parquet_shards_from_folder
-from pystatic.utilities import batchify
+from nife.data import build_parquet_shards_from_folder
+from nife.utilities import batchify
 
 logger = logging.getLogger(__name__)
 

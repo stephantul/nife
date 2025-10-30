@@ -10,7 +10,7 @@ from datasets import Dataset, concatenate_datasets, load_dataset
 from skeletoken import TokenizerModel
 from tqdm import tqdm
 
-from pystatic.utilities import batchify
+from nife.utilities import batchify
 
 logger = logging.getLogger(__name__)
 

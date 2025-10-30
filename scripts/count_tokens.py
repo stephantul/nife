@@ -8,7 +8,7 @@ from skeletoken import TokenizerModel
 from skeletoken.preprocessor import Preprocessor
 from tqdm import tqdm
 
-from pystatic.data import get_datasets
+from nife.data import get_datasets
 
 
 def _process_example(example) -> tuple[Counter[str], set[str]]:
