@@ -1,4 +1,4 @@
-from pystatic.utilities import batchify
+from nife.utilities import batchify
 
 
 def test_batchify_with_list() -> None:

@@ -6,7 +6,7 @@ import pyarrow.parquet as pq
 import torch
 from datasets import Dataset, IterableDataset
 
-from pystatic.data import build_parquet_shards_from_folder, get_datasets
+from nife.data import build_parquet_shards_from_folder, get_datasets
 
 
 def _make_input_folder(tmp: Path, *, n_rows: int = 3) -> Path:

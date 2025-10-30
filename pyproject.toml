@@ -1,6 +1,6 @@
 [project]
-name = "pystatic"
-description = "Static models in python"
+name = "nife"
+description = "Nearly Inference Free embedding models in python"
 readme = "README.md"
 dynamic = ["version"]
 requires-python = ">=3.11"
@@ -75,10 +75,10 @@ warn_unused_configs = true
 ignore_missing_imports = true
 
 [tool.setuptools]
-packages = ["pystatic"]
+packages = ["nife"]
 
 [tool.setuptools_scm]
 # can be empty if no extra settings are needed, presence enables setuptools_scm
 
 [tool.setuptools.dynamic]
-version = {attr = "pystatic.version.__version__"}
+version = {attr = "nife.version.__version__"}

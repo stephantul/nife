@@ -2,7 +2,7 @@ import pytest
 import torch
 from sentence_transformers import SentenceTransformer
 
-from pystatic.losses import CosineLoss, DistillationCosineLoss, select_loss
+from nife.losses import CosineLoss, DistillationCosineLoss, select_loss
 
 
 def test_cosine_loss(test_model: SentenceTransformer) -> None:

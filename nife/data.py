@@ -13,7 +13,7 @@ from datasets import Sequence as DatasetSequenceFeature
 from huggingface_hub import HfApi
 from tqdm import tqdm
 
-from pystatic.dataset_card import generate_dataset_card
+from nife.dataset_card import generate_dataset_card
 
 
 def _pair_stream(
