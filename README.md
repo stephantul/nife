@@ -1,4 +1,8 @@
-# (k)NIFE
+
+<h2 align="center">
+  <img width="35%" alt="A man shooting a thing to the ground." src="https://raw.githubusercontent.com/stephantul/nife/main/assets/william-blake.jpg"><br/>
+</h2>
+<h1 align="center"> (k)NIFE </h2>
 
 This is the repository for training Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. NIFE allows you to:
 
