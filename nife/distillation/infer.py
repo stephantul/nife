@@ -8,8 +8,9 @@ from typing import TypeVar
 import numpy as np
 import torch
 from sentence_transformers import SentenceTransformer
+from skeletoken import TokenizerModel
 from tqdm import tqdm
-from transformers import BatchEncoding, PreTrainedTokenizer
+from transformers import BatchEncoding, PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
 from nife.data import build_parquet_shards_from_folder
 from nife.utilities import batchify
@@ -45,7 +46,9 @@ def _write_data(path: Path, pooled: list[torch.Tensor], records: list[dict[str, 
             f.write(line + "\n")
 
 
-def _tokenize(strings: list[str], tokenizer: PreTrainedTokenizer, max_length: int) -> tuple[BatchEncoding, list[str]]:
+def _tokenize(
+    strings: list[str], tokenizer: PreTrainedTokenizerBase, max_length: int
+) -> tuple[BatchEncoding, list[str]]:
     """
     Tokenize a list of strings using a HuggingFace tokenizer.
 
@@ -87,6 +90,8 @@ def _generate_embeddings(
     max_length: int = 512,
     save_every: int = 8192,
     limit_batches: int | None = None,
+    lowercase: bool = True,
+    make_greedy: bool = True,
 ) -> None:
     """
     Generate embeddings for a stream of texts using a SentenceTransformer model.
@@ -105,6 +110,8 @@ def _generate_embeddings(
         max_length: The maximum sequence length for tokenization. Defaults to 512.
         save_every: Save intermediate results every N batches. Defaults to 8192.
         limit_batches: An optional limit on the number of batches to process.
+        lowercase: Whether to lowercase the tokenizer.
+        make_greedy: Whether to make the tokenizer greedy.
 
     """
     model.eval()
@@ -114,7 +121,17 @@ def _generate_embeddings(
     shards_saved = 0
 
     all_pooled, accumulated_records = [], []
-    tokenizer: PreTrainedTokenizer = model.tokenizer
+    tokenizer: PreTrainedTokenizerBase = model.tokenizer
+
+    if lowercase and isinstance(tokenizer, PreTrainedTokenizerFast):
+        tokenizer_model = TokenizerModel.from_transformers_tokenizer(tokenizer)
+        tokenizer_model = tokenizer_model.decase_vocabulary()
+        tokenizer = tokenizer_model.to_transformers()
+    if make_greedy and isinstance(tokenizer, PreTrainedTokenizerFast):
+        tokenizer_model = TokenizerModel.from_transformers_tokenizer(tokenizer)
+        tokenizer_model = tokenizer_model.make_model_greedy()
+        tokenizer = tokenizer_model.to_transformers()
+
     original_max_length = model[0].max_seq_length
     assert original_max_length is not None
     assert isinstance(original_max_length, int)
@@ -170,6 +187,8 @@ def generate_and_save_embeddings(
     batch_size: int = 512,
     save_every: int = 256,
     max_length: int = 512,
+    lowercase: bool = True,
+    make_greedy: bool = True,
 ) -> None:
     """Run inference and save the results to parquet shards."""
     with TemporaryDirectory() as dir_name:
@@ -181,6 +200,8 @@ def generate_and_save_embeddings(
             save_every=save_every,
             limit_batches=limit_batches,
             max_length=max_length,
+            lowercase=lowercase,
+            make_greedy=make_greedy,
         )
 
         logger.info("Converting dataset to shards...")
