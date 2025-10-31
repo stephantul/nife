@@ -6,23 +6,23 @@ This is the repository for training Nearly Inference Free Embedding (NIFE) model
 2. Use a much smaller memory/compute footprint. Create embeddings in your DB service.
 3. Use the same index as your big model. Switch dynamically between your big model and the NIFE model.
 
-# Use cases
+## Use cases
 
 Here's some things you can do with NIFE.
 
-## Search engine
+### Search engine
 
 You have a search engine and want to offer both a fast path and slow path to your customers. The fast path computes the query using the NIFE model, the slow path computes it using the slow model. Your customers pay less for the NIFE model. You can use the same document index for both models, so there's no overhead to deploying NIFE.
 
-## RAG
+### RAG
 
 Your agent sometimes needs to retrieve large sets of documents and you want to get this context to the agent as fast as possible. You are bound to using relatively low amounts of compute. A NIFE model can run on a toaster, so you run a small server next to your agent that lets it compute embeddings really quickly.
 
-## On the fly document comparisons
+### On the fly document comparisons
 
 You have a very fast pipeline of incoming documents for which you need to compute similarities, e.g., to detect near duplicates. You can compute your corpus using the big transformer, but when new documents come in, you use the NIFE model to create vectors.
 
-## Free additional features
+### Free additional features
 
 NIFE models compute different things than their teacher models, so they can be used as an additional source of information during ranking.
 
