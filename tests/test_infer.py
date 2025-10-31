@@ -31,7 +31,7 @@ def test_tokenize(test_tokenizer: PreTrainedTokenizer) -> None:
     tokenized, truncated = _tokenize(strings, test_tokenizer, max_length)
 
     # tokenized input_ids should be a 2D tensor and truncated should be a list of strings
-    assert isinstance(tokenized["input_ids"], torch.Tensor) and tokenized["input_ids"].ndim == 2
+    assert isinstance(tokenized["input_ids"], torch.Tensor) and tokenized["input_ids"].ndim == 2  # type: ignore
     assert isinstance(truncated, list) and all(isinstance(x, str) for x in truncated)
 
 
