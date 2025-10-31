@@ -18,47 +18,43 @@ def parse_args() -> Namespace:
         required=True,
         help="Name of the pre-trained model to use for inference.",
     )
-
     parser.add_argument(
         "--datasets",
         nargs="+",
         required=True,
         help="List of dataset names to process. Available datasets: " + ", ".join(get_all_dataset_functions().keys()),
     )
-
     parser.add_argument(
         "--batch-size",
         type=int,
         default=512,
         help="Batch size for inference (default: 512)",
     )
-
     parser.add_argument(
         "--save-every",
         type=int,
         default=256,
         help="Save embeddings every N batches (default: 256)",
     )
-
     parser.add_argument(
         "--max-length",
         type=int,
         default=512,
         help="Max length for inference (default: 512)",
     )
-
     parser.add_argument(
         "--limit-batches",
         type=int,
         help="Limit the number of batches to process (for testing)",
     )
-
     parser.add_argument(
         "--converted-base-dir",
         type=str,
         default="converted_datasets",
         help="Base directory for converted dataset files (default: converted_datasets)",
     )
+    parser.add_argument("--lowercase", action="store_true", help="Whether to lowercase the tokenizer.")
+    parser.add_argument("--make-greedy", action="store_true", help="Whether to make the tokenizer greedy.")
 
     return parser.parse_args()
 
@@ -113,6 +109,8 @@ def main() -> None:
             max_length=args.max_length,
             model_name=args.model_name,
             dataset_name=full_name,
+            lowercase=args.lowercase,
+            make_greedy=args.make_greedy,
         )
 
 
