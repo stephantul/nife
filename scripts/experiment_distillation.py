@@ -4,7 +4,6 @@ import random
 from typing import cast
 
 import torch
-import wandb
 from datasets import Dataset, IterableDataset, load_dataset
 from sentence_transformers import (
     SentenceTransformer,
@@ -18,6 +17,8 @@ from sentence_transformers.models import Module, Normalize, Router, StaticEmbedd
 from skeletoken import TokenizerModel
 from torch import nn
 
+import wandb
+from nife.cards.model_card import get_model_card_template_path
 from nife.data import get_datasets, get_model_name_from_datasets
 from nife.embedding import TrainableStaticEmbedding
 from nife.initialization.model import initialize_from_model
@@ -109,6 +110,7 @@ def run_experiment(
     lr_scheduler_type: str,
     weight_decay: float,
     max_grad_norm: float,
+    base_model_name: str | None,
 ) -> None:
     """Run the distillation experiment."""
     # Workaround for local development
@@ -206,7 +208,14 @@ def run_experiment(
         tokenizer=static_module.tokenizer,
         embedding_weights=static_module.embedding.weight.data.cpu().numpy(),
     )
+    old_model_card_data = model.model_card_data
     new_model = SentenceTransformer(modules=[new_static_model, Normalize()])
+    # This tag needs to be added, otherwise the model card is not updated.
+    new_model.model_card_data_class.template_path = get_model_card_template_path()
+    new_model.model_card_data = old_model_card_data
+    new_model.model_card_data.tags.append("generated_from_trainer")  # type: ignore
+    new_model.model_card_data.base_model = base_model_name
+    new_model.model_card_data.model_name = f"NIFE model based on {base_model_name}"  # type: ignore
     new_model.save_pretrained(f"models/{name}/final")
 
 
@@ -260,6 +269,7 @@ if __name__ == "__main__":
         lr_scheduler_type=parsed_args.scheduler_type,
         weight_decay=parsed_args.weight_decay,
         max_grad_norm=parsed_args.max_grad_norm,
+        base_model_name=model_name,
     )
 
     if model_name is not None:
