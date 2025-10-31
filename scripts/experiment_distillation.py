@@ -38,9 +38,9 @@ def _parse_args() -> argparse.Namespace:
         nargs="+",
     )
     parser.add_argument("--model-dim", type=int, default=1024, help="Dimensionality of the model.")
-    parser.add_argument("--batch-size", type=int, default=2048, help="Batch size for training.")
+    parser.add_argument("--batch-size", type=int, default=128, help="Batch size for training.")
     parser.add_argument("--epochs", type=int, default=5, help="Number of epochs for training.")
-    parser.add_argument("--learning-rate", type=float, default=0.05, help="Learning rate for training.")
+    parser.add_argument("--learning-rate", type=float, default=0.01, help="Learning rate for training.")
     parser.add_argument(
         "--tokenizer-path", type=str, default="mixedbread-ai/mxbai-embed-large-v1", help="Path to the tokenizer."
     )
