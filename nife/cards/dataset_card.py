@@ -3,8 +3,6 @@ from jinja2 import Template
 DATASET_CARD_TEMPLATE = """---
 dataset_info:
   features:
-  - name: id
-    dtype: string
   - name: text
     dtype: string
   - name: embedding
@@ -38,11 +36,10 @@ For each example, we embed the text directly (no additional instruction prompt).
 Embeddings have dimensionality **{{ length }}**.
 
 These embeddings are intended for tasks like large-scale distillation, retrieval, and similarity search.
-Because the raw text may exceed the model’s limit, we recommend truncating to the model’s maximum token length at build time.
+Because the raw text may exceed the model's limit, we recommend truncating to the model's maximum token length at build time.
 
 ## Schema
 
-- `id` *(string)* — unique identifier
 - `text` *(string)* — the query text used for embedding
 - `embedding` *(float32[{{ length }}])* — the vector representation from `{{ model_name }}`
 
