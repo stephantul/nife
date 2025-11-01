@@ -1,12 +1,15 @@
 import json
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest import mock
 
 import pyarrow.parquet as pq
+import pytest
 import torch
 from datasets import Dataset, IterableDataset
 
-from nife.data import build_parquet_shards_from_folder, get_datasets
+from nife import data
+from nife.data import build_parquet_shards_from_folder, get_datasets, get_model_name_from_datasets
 
 
 def _make_input_folder(tmp: Path, *, n_rows: int = 3) -> Path:
@@ -150,3 +153,37 @@ def test_get_datasets_columns_to_keep_and_limit_shards() -> None:
             # sum rows from the first `limit_shards` files
             expected = sum(pq.read_metadata(shards[i]).num_rows for i in range(min(1, len(shards))))
         assert length2 == expected
+
+
+def test_get_model_name_from_single_dataset() -> None:
+    """When a single dataset reports a model_name, return it."""
+    calls: list[tuple[str, str]] = []
+
+    def fake_get_teacher(path: str, key: str = "model_name") -> str:
+        calls.append((path, key))
+        return "my-base-model"
+
+    with mock.patch.object(data, "get_teacher_from_metadata", side_effect=fake_get_teacher):
+        result = data.get_model_name_from_datasets(["dataset/a"])
+
+    assert result == "my-base-model"
+    assert calls == [("dataset/a", "model_name")]
+
+
+def test_get_model_name_from_no_datasets() -> None:
+    """If none of the datasets expose a model_name, return None."""
+    with mock.patch.object(data, "get_teacher_from_metadata", return_value=None):
+        result = get_model_name_from_datasets(["dataset/a"])  # returns None when nothing found
+    assert result is None
+
+
+def test_get_model_name_from_multiple_datasets_raises() -> None:
+    """If datasets report different model names, raise ValueError."""
+    responses = {"d1": "model-a", "d2": "model-b"}
+
+    def fake_get_teacher(path: str, key: str = "model_name") -> str | None:
+        return responses.get(path, None)
+
+    with mock.patch.object(data, "get_teacher_from_metadata", side_effect=fake_get_teacher):
+        with pytest.raises(ValueError):
+            get_model_name_from_datasets(["d1", "d2"])
