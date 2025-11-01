@@ -3,7 +3,7 @@ name = "nife"
 description = "Nearly Inference Free embedding models in python"
 readme = "README.md"
 dynamic = ["version"]
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 
 dependencies = [
     "transformers[torch]",
