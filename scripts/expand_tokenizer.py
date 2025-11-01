@@ -1,20 +1,20 @@
 import logging
-import re
 from argparse import ArgumentParser, Namespace
+from collections import defaultdict
 from collections.abc import Iterator
-from pathlib import Path
-from typing import cast
+from typing import TypedDict, cast
 
-import numpy as np
-from datasets import Dataset, concatenate_datasets, load_dataset
-from skeletoken import TokenizerModel
-from tqdm import tqdm
+from datasets import load_dataset
+from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
-from nife.utilities import batchify
+from nife.tokenizer.expand import expand_tokenizer
 
 logger = logging.getLogger(__name__)
 
-_NUMBERS_RE = re.compile(r"^\d+$")
+
+class VocabItem(TypedDict):
+    token: str
+    frequency: int
 
 
 def _parse_args() -> Namespace:
@@ -40,51 +40,26 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     parsed_args = _parse_args()
-    tokenizer_model = TokenizerModel.from_pretrained(parsed_args.tokenizer_name)
-    tokenizer = tokenizer_model.to_tokenizer()
+    tokenizer: PreTrainedTokenizerFast = AutoTokenizer.from_pretrained(parsed_args.tokenizer_name, use_fast=True)
 
-    tokenizer_name = parsed_args.tokenizer_name.replace("/", "-")
-    filtered_string = "filtered" if parsed_args.filter_numbers else "unfiltered"
-    tokenizer_name = f"{tokenizer_name}-{parsed_args.vocab_size}-{parsed_args.min_subword_frequency}-{filtered_string}"
+    counts: dict[str, int] = defaultdict(int)
 
-    output_path = Path(parsed_args.output_folder) / tokenizer_name
-    output_path.mkdir(parents=True, exist_ok=True)
+    for dataset in parsed_args.vocabulary_data:
+        ds = load_dataset(dataset, split="train")
+        item: VocabItem
+        for item in cast(Iterator[VocabItem], ds):
+            token = item["token"]
+            frequency = item["frequency"]
+            counts[token] += frequency
 
-    datasets = []
-    for data in parsed_args.vocabulary_data:
-        datasets.append(cast(Dataset, load_dataset(data, split="train")))
-    dataset = concatenate_datasets(datasets).sort("document_frequency", reverse=True)
+    data: list[tuple[str, int]] = sorted(counts.items(), key=lambda x: x[1], reverse=True)
 
-    old_vocab_size = tokenizer.get_vocab_size()
-    original_vocab_counts = np.zeros(old_vocab_size, dtype=np.int32)
+    new_tokenizer = expand_tokenizer(
+        tokenizer=tokenizer,
+        data=data,
+        new_vocab_size=parsed_args.vocab_size,
+        filter_numbers=parsed_args.filter_numbers,
+        min_subword_frequency=parsed_args.min_subword_frequency,
+    )
 
-    for batch in tqdm(batchify(dataset["token"], batch_size=10_000)):
-        tokenized = tokenizer.encode_batch_fast(batch, add_special_tokens=False)
-        for encoding in tokenized:
-            counts = np.bincount(encoding.ids, minlength=old_vocab_size)
-            original_vocab_counts += counts
-
-    vocab_to_remove = original_vocab_counts < parsed_args.min_subword_frequency
-
-    vocabulary = {index: token for token, index in tokenizer_model.vocabulary.items()}
-    for id in np.flatnonzero(vocab_to_remove):
-        token = vocabulary[id]
-        tokenizer_model.remove_token_from_vocabulary(token)
-
-    logger.info("Removed %d tokens from vocabulary.", np.sum(vocab_to_remove))
-    n_tokens_to_add = parsed_args.vocab_size - tokenizer_model.vocabulary_size
-    logger.info("Adding %d new tokens to vocabulary.", n_tokens_to_add)
-
-    all_tokens = cast(Iterator[str], dataset["token"])
-    tokens_added = 0
-    for token in all_tokens:
-        if parsed_args.filter_numbers and _NUMBERS_RE.match(token):
-            continue
-        if tokens_added >= n_tokens_to_add:
-            break
-        if token in tokenizer_model.vocabulary:
-            continue
-        tokenizer_model.add_token_to_vocabulary(token)
-        tokens_added += 1
-
-    tokenizer_model.to_transformers().save_pretrained(output_path)
+    new_tokenizer.save_pretrained(parsed_args.output_folder)
