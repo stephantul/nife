@@ -25,7 +25,7 @@ def _prune_tokenizer(
     old_vocab_size = tokenizer_object.get_vocab_size()
     original_vocab_counts = np.zeros(old_vocab_size, dtype=np.int32)
 
-    for batch in tqdm(batchify(data, batch_size=10_000)):
+    for batch in tqdm(batchify(data, batch_size=10_000), desc="Counting subword frequencies"):
         token_strings, token_counts = zip(*batch)
         tokenized = tokenizer_object.encode_batch_fast(token_strings, add_special_tokens=False)
         for encoding, count in zip(tokenized, token_counts):
@@ -80,6 +80,7 @@ def expand_tokenizer(
 ) -> PreTrainedTokenizerFast:
     """Expand a tokenizer's vocabulary using a TokenizerModel."""
     tokenizer_model = TokenizerModel.from_transformers_tokenizer(tokenizer)
-    tokenizer_model = _prune_tokenizer(tokenizer_model, data, min_subword_frequency)
+    if min_subword_frequency > 0:
+        tokenizer_model = _prune_tokenizer(tokenizer_model, data, min_subword_frequency)
     new_tokenizer = _add_tokens_to_tokenizer(tokenizer_model, data, filter_numbers, new_vocab_size)
     return new_tokenizer.to_transformers()

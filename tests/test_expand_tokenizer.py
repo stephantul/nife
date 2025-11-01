@@ -108,3 +108,19 @@ def test_add_tokens_skips_existing_tokens(test_tokenizer: PreTrainedTokenizerFas
     assert isinstance(returned, TokenizerModel)
     # either brand_new_token was added or the vocabulary size remains same if skipped
     assert returned.vocabulary_size >= orig_size
+
+
+def test_expand_invokes_prune_branch(test_tokenizer: PreTrainedTokenizerFast) -> None:
+    """Calling expand_tokenizer with min_subword_frequency>0 should invoke the prune path."""
+    tokenizer = test_tokenizer
+    original_vocab = tokenizer.get_vocab()
+    original_size = len(original_vocab)
+
+    data: List[FreqTuple] = [("a", 1), ("b", 1)]
+
+    # Set new_vocab_size to current size so no tokens are added; this ensures
+    # expand_tokenizer will call _prune_tokenizer (min_subword_frequency > 0)
+    new_tokenizer = expand_tokenizer(
+        tokenizer, data, min_subword_frequency=1, new_vocab_size=original_size, filter_numbers=False
+    )
+    assert isinstance(new_tokenizer, PreTrainedTokenizerFast)
