@@ -14,6 +14,7 @@ from huggingface_hub import HfApi
 from tqdm import tqdm
 
 from nife.cards.dataset_card import generate_dataset_card
+from nife.utilities import get_teacher_from_metadata
 
 
 def _pair_stream(
@@ -277,21 +278,11 @@ def get_model_name_from_datasets(datasets: list[str]) -> str | None:
     """Get a model name based on the datasets."""
     model_names = set()
     for dataset in datasets:
-        dataset_path = Path(dataset)
-        file_name: str | Path
-        if dataset_path.is_dir():
-            file_name = dataset_path / "metadata.json"
-            if not file_name.exists():
-                continue
-        else:
-            api = HfApi()
-            try:
-                file_name = api.hf_hub_download(repo_id=dataset, repo_type="dataset", filename="metadata.json")
-            except Exception:
-                continue
-        with open(file_name, "r", encoding="utf-8") as f:
-            metadata = json.load(f)
-            model_names.add(metadata.get("model_name"))
+        model_name = get_teacher_from_metadata(dataset, key="model_name")
+        if model_name:
+            model_names.add(model_name)
     if len(model_names) > 1:
         raise ValueError(f"Multiple base models found: {model_names}")
+    if not model_names:
+        return None
     return next(iter(model_names))

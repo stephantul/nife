@@ -1,27 +1,7 @@
-from pathlib import Path
-
-from huggingface_hub import HfApi, ModelCard
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.models import Router
 
-
-def _get_teacher_from_metadata(path: str | Path) -> str:
-    """Gets metadata file for a given model from the Hugging Face Hub or a local path."""
-    path = Path(path)
-    if path.exists() and path.is_dir():
-        readme_path = str(path / "README.md")
-    else:
-        api = HfApi()
-        try:
-            readme_path = api.hf_hub_download(repo_id=str(path), filename="README.md")
-        except Exception as e:
-            raise FileNotFoundError(f"Could not find README.md for model at {path}") from e
-
-    model_card = ModelCard.load(readme_path)
-    model_name: str | None = getattr(model_card.data, "base_model", None)
-    if model_name is None:
-        raise ValueError(f"Could not find 'base_model' in metadata for model at {path}")
-    return model_name
+from nife.utilities import get_teacher_from_metadata
 
 
 def load_nife(name: str, teacher_name: str | None = None) -> SentenceTransformer:
@@ -40,7 +20,7 @@ def load_nife(name: str, teacher_name: str | None = None) -> SentenceTransformer
         ValueError: If the dimensionality of the teacher and student models do not match.
 
     """
-    teacher_name = teacher_name or _get_teacher_from_metadata(name)
+    teacher_name = teacher_name or get_teacher_from_metadata(name, "base_model")
     big_model = SentenceTransformer(teacher_name)
     small_model = SentenceTransformer(name)
 

@@ -1,9 +1,11 @@
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from sentence_transformers import SentenceTransformer
 
-from nife import nife
+from nife.nife import load_nife
+from nife.utilities import get_teacher_from_metadata
 
 
 class DummyModelCard:
@@ -35,7 +37,7 @@ class DummyRouter:
         self.d = d
 
 
-def test_get_teacher_from_metadata_local(tmp_path, monkeypatch) -> None:
+def test_get_teacher_from_metadata_local(tmp_path) -> None:
     """Ensure that when a local model path contains a README, the function extracts the `base_model` value from the ModelCard."""
     # Create a fake README.md and ensure ModelCard.load reads it
     readme = tmp_path / "README.md"
@@ -46,13 +48,12 @@ def test_get_teacher_from_metadata_local(tmp_path, monkeypatch) -> None:
         assert str(path) == str(readme)
         return DummyModelCard(DummyData(base_model="teacher-model"))
 
-    monkeypatch.setattr(nife.ModelCard, "load", fake_load)
+    with patch("nife.utilities.ModelCard.load", new=fake_load):
+        teacher = get_teacher_from_metadata(tmp_path)
+        assert teacher == "teacher-model"
 
-    teacher = nife._get_teacher_from_metadata(tmp_path)
-    assert teacher == "teacher-model"
 
-
-def test_get_teacher_from_metadata_remote_hf_success(monkeypatch, tmp_path) -> None:
+def test_get_teacher_from_metadata_remote_hf_success(tmp_path) -> None:
     """When given a remote repo id, the function should call the HF API to download the README and extract `base_model` from it."""
     # Simulate hf_hub_download returning a README path
     fake_readme = tmp_path / "remote_README.md"
@@ -63,43 +64,43 @@ def test_get_teacher_from_metadata_remote_hf_success(monkeypatch, tmp_path) -> N
         assert filename == "README.md"
         return str(fake_readme)
 
-    monkeypatch.setattr(nife, "HfApi", lambda: type("A", (), {"hf_hub_download": staticmethod(fake_download)})())
+    fake_api = lambda: type("A", (), {"hf_hub_download": staticmethod(fake_download)})()
+    with (
+        patch("nife.utilities.HfApi", new=fake_api),
+        patch("nife.utilities.ModelCard.load", new=lambda p: DummyModelCard(DummyData(base_model="teacher-remote"))),
+    ):
+        teacher = get_teacher_from_metadata("owner/repo")
+        assert teacher == "teacher-remote"
 
-    monkeypatch.setattr(nife.ModelCard, "load", lambda p: DummyModelCard(DummyData(base_model="teacher-remote")))
 
-    teacher = nife._get_teacher_from_metadata("owner/repo")
-    assert teacher == "teacher-remote"
-
-
-def test_get_teacher_from_metadata_remote_hf_not_found(monkeypatch) -> None:
+def test_get_teacher_from_metadata_remote_hf_not_found() -> None:
     """If the HF API fails to download a README, the function should raise FileNotFoundError."""
 
     def fake_download(repo_id: str, filename: str) -> str:
         raise Exception("not found")
 
-    monkeypatch.setattr(nife, "HfApi", lambda: type("A", (), {"hf_hub_download": staticmethod(fake_download)})())
+    fake_api = lambda: type("A", (), {"hf_hub_download": staticmethod(fake_download)})()
+    with patch("nife.utilities.HfApi", new=fake_api):
+        with pytest.raises(FileNotFoundError):
+            get_teacher_from_metadata("owner/nonexistent")
 
-    with pytest.raises(FileNotFoundError):
-        nife._get_teacher_from_metadata("owner/nonexistent")
 
-
-def test_get_teacher_from_metadata_missing_base_model(monkeypatch, tmp_path) -> None:
+def test_get_teacher_from_metadata_missing_base_model(tmp_path) -> None:
     """If the README/ModelCard contains no `base_model` field, the function should raise ValueError."""
     # Local README but ModelCard has no base_model
     readme = tmp_path / "README.md"
     readme.write_text("nothing")
 
-    monkeypatch.setattr(nife.ModelCard, "load", lambda p: DummyModelCard(DummyData(base_model=None)))
+    with patch("nife.utilities.ModelCard.load", new=lambda p: DummyModelCard(DummyData(base_model=None))):
+        with pytest.raises(ValueError):
+            get_teacher_from_metadata(tmp_path)
 
-    with pytest.raises(ValueError):
-        nife._get_teacher_from_metadata(tmp_path)
 
-
-def test_load_nife_success(monkeypatch, test_model) -> None:
+def test_load_nife_success(test_model) -> None:
     """Load a student and teacher with matching embedding dimensions and verify the composed SentenceTransformer is returned."""
     # Use the provided test_model as the small student model.
-    # Monkeypatch _get_teacher_from_metadata to return a fake teacher name.
-    monkeypatch.setattr(nife, "_get_teacher_from_metadata", lambda name: "teacher-name")
+    # Monkeypatch get_teacher_from_metadata to return a fake teacher name.
+    fake_get_teacher = lambda name, base_model: "teacher-name"
 
     # Provide a fake teacher SentenceTransformer object with matching dimension
     class TeacherLike:
@@ -119,33 +120,33 @@ def test_load_nife_success(monkeypatch, test_model) -> None:
             return test_model
         raise ValueError("unexpected model name")
 
-    monkeypatch.setattr(nife, "SentenceTransformer", sentence_transformer_loader)
+    with (
+        patch("nife.nife.get_teacher_from_metadata", new=fake_get_teacher),
+        patch("nife.nife.SentenceTransformer", new=sentence_transformer_loader),
+        patch(
+            "nife.nife.Router.for_query_document",
+            new=staticmethod(lambda query_modules, document_modules: DummyRouter(query_modules, document_modules)),
+        ),
+    ):
+        model = load_nife("small-model")
+        assert model == "composed-model"
 
-    # Patch Router.for_query_document to return a DummyRouter
-    monkeypatch.setattr(
-        nife.Router,
-        "for_query_document",
-        staticmethod(lambda query_modules, document_modules: DummyRouter(query_modules, document_modules)),
-    )
 
-    model = nife.load_nife("small-model")
-    assert model == "composed-model"
-
-
-def test_load_nife_dimensionality_mismatch(monkeypatch, test_model) -> None:
+def test_load_nife_dimensionality_mismatch(test_model) -> None:
     """If teacher and student embedding dimensionalities differ, load_nife should raise a ValueError."""
     # teacher has different dimension than the test_model student
-    monkeypatch.setattr(nife, "_get_teacher_from_metadata", lambda name: "teacher-name")
+    fake_get_teacher = lambda name, base_model: "teacher-name"
 
     class BadTeacher:
         def get_sentence_embedding_dimension(self) -> int:
             return test_model.get_sentence_embedding_dimension() + 1
 
-    monkeypatch.setattr(
-        nife,
-        "SentenceTransformer",
-        lambda name_or_modules=None, *a, **k: BadTeacher() if name_or_modules == "teacher-name" else test_model,
-    )
+    def sentence_transformer_loader(name_or_modules: object | None = None, *a: object, **k: object) -> object:
+        return BadTeacher() if name_or_modules == "teacher-name" else test_model
 
-    with pytest.raises(ValueError):
-        nife.load_nife("small-model")
+    with (
+        patch("nife.nife.get_teacher_from_metadata", new=fake_get_teacher),
+        patch("nife.nife.SentenceTransformer", new=sentence_transformer_loader),
+    ):
+        with pytest.raises(ValueError):
+            load_nife("small-model")
