@@ -12,143 +12,94 @@ NIFE compresses large embedding models into static, drop-in replacements with up
 - Fully aligned with their teacher models
 - Re-use your existing vector index
 
-# Quickstart
-
-This snippet loads [`stephantulkens/nife-mxbai-base`](), which is aligned with [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1). Use it in any spot where you use `mixedbread-ai/mxbai-embed-large-v1`.
-
-```python
-from nife import load_nife
-
-model = load_nife("stephantulkens/nife-mxbai-base")
-query_vec = model.encode_query(["What is the capital of France?"])
-
-# Four cities near France
-index_doc = model.encode_document(["Paris is a nice city", "I love Lyon", "Antwerp is really great", "Berlin is pretty gloomy in winter"])
-
-similarity = model.similarity(query_vec, index_doc)
-print(similarity)
-# It correctly retrieved Paris
-# tensor([[0.6981, 0.5797, 0.5822, 0.4959]])
-
-```
-
 # Introduction
 
-This is the repository for training Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. Because static models are so small and fast, NIFE allows you to:
+Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. Because static models are so small and fast, NIFE allows you to:
 
 1. Speed up query time immensely: 200x embed time speed-up on CPU.
 2. Get away with using a much smaller memory/compute footprint. Create embeddings in your DB service.
 3. Reuse your big model index: Switch dynamically between your big model and the NIFE model.
 
-## Use cases
+Some possible use-cases for NIFE include search engines with slow and fast paths, RAGs in agent loops, and on-the-fly document comparisons.
 
-Here are some possible use-cases for NIFE:
+# Quickstart
 
-1. Search engine
-
-You have a search engine and want to offer both a fast path and slow path to your customers. The fast path computes the query using the NIFE model, the slow path computes it using the slow model. Your customers pay less for the NIFE model. You can use the same document index for both models, so there's no overhead to deploying NIFE.
-
-2. RAG
-
-Your agent sometimes needs to retrieve large sets of documents and you want to get this context to the agent as fast as possible. You are bound to using relatively low amounts of compute. A NIFE model can run on a toaster, so you run a small server next to your agent that lets it compute embeddings really quickly.
-
-3. On the fly document comparisons
-
-You have a very fast pipeline of incoming documents for which you need to compute similarities, e.g., to detect near duplicates. You can compute your corpus using the big transformer, but when new documents come in, you use the NIFE model to create vectors.
-
-4. Free additional features
-
-NIFE models compute different things than their teacher models, so they can be used as an additional source of information during ranking.
-
-# Usage
-
-A NIFE model is just a [sentence transformer](https://github.com/huggingface/sentence-transformers) router model, so you don't need to install anything except that. Nevertheless, NIFE contains some helper functions for loading a model trained with NIFE. As an example, we'll load our base model [], which was trained using [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1) as a teacher.
-
-Note that in all cases the teacher model is unchanged; so if you have a large set of documents indexed with the teacher model, you can use the NIFE model as a drop-in replacement.
-
-## Usage with NIFE
-
-Here's how to use NIFE.
+This snippet loads [`stephantulkens/nife-mxbai-base`](), which is aligned with [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1). Use it in any spot where you use `mixedbread-ai/mxbai-embed-large-v1`.
 
 ```python
-from nife import load_nife
-from sentence_transformers import SentenceTransformer, Router
+from sentence_transformers import SentenceTransformer
 
-model = load_nife("")
+model = SentenceTransformer("stephantulkens/nife-mxbai-base", device="cpu")
+# Loads in 41ms.
+query_vec = model.encode(["What is the capital of France?"])
+# Embedding a query takes 90.4 microseconds.
 
-documents = ["", ""]
-index = model.encode_document(documents, normalize_embeddings=True)
-query = [""]
-query_vector = model.encode_query(query, normalize_embeddings=True)
+big_model = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1", device="cpu")
+# Four cities near France
+index_doc = big_model.encode(["Paris is the largest city in France", "Lyon is pretty big", "Antwerp is really great, and in Belgium", "Berlin is pretty gloomy in winter", "France is a country in Europe"])
 
-similarity = query_vector @ index.T
+similarity = model.similarity(query_vec, index_doc)
+print(similarity)
+# It correctly retrieved the document containing the statement about paris.
+# tensor([[0.7065, 0.5012, 0.3596, 0.2765, 0.6648]])
+
+big_model_query_vec = big_model.encode(["What is the capital of France?"])
+# Embedding a query takes 68.1 ms (~750 times slower)
+similarity = model.similarity(big_model_query_vec, index_doc)
+# Compare to the above. Very similar.
+# tensor([[0.7460, 0.5301, 0.3816, 0.3423, 0.6692]])
+
+similarity_queries = model.similarity(big_model_query_vec, query_vec)
+# The two vectors are very similar.
+# tensor([[0.9377]])
 
 ```
 
-## Usage with sentence-transformers
+This snippet is an example of how you could use it. But in reality you should just use it wherever you encode a query using your teacher model. There's no need to keep the teacher in memory. This makes NIFE extremely flexible, because you can decouple the inference model from the indexing model. Because the models load extremely quickly, they can be used in edge environments and one-off things like lambda functions.
 
-This is just the snippet from the `nife` library. Use this is if you don't want to download `nife`.
+# Installation
+
+On [PyPi](https://pypi.org/project/nife/):
+
+```
+pip install nife
+```
+
+# Usage
+
+A NIFE model is just a [sentence transformer](https://github.com/huggingface/sentence-transformers) router model, so you don't need to install `nife` to use NIFE models. Nevertheless, NIFE contains some helper functions for loading a model trained with NIFE.
+
+Note that with all NIFE models the teacher model is unchanged; so if you have a large set of documents indexed with the teacher model, you can use the NIFE model as a drop-in replacement.
+
+## Usage
+
+### Standalone
+
+Use just like any other sentence transformer:
 
 ```python
-from pathlib import Path
-
-from huggingface_hub import HfApi, ModelCard
 from sentence_transformers import SentenceTransformer
-from sentence_transformers.models import Router
 
+model = SentenceTransformer("stephantulkens/nife-mxbai-base", device="cpu")
+X = model.encode(["hello how are you?"])
+```
 
-def _get_teacher_from_metadata(path: str | Path) -> str:
-    """Gets metadata file for a given model from the Hugging Face Hub or a local path."""
-    path = Path(path)
-    if path.exists() and path.is_dir():
-        readme_path = str(path / "README.md")
-    else:
-        api = HfApi()
-        try:
-            readme_path = api.hf_hub_download(repo_id=str(path), filename="README.md")
-        except Exception as e:
-            raise FileNotFoundError(f"Could not find README.md for model at {path}") from e
+### As a router
 
-    model_card = ModelCard.load(readme_path)
-    model_name: str | None = getattr(model_card.data, "base_model", None)
-    if model_name is None:
-        raise ValueError(f"Could not find 'base_model' in metadata for model at {path}")
-    return model_name
+You can also use the small model and big model together as a single [router](https://sbert.net/docs/package_reference/sentence_transformer/models.html#sentence_transformers.models.Router) using a helper function from `nife`. This is useful for benchmarking; in production you should probably use the query model by itself.
 
+```python
+from nife import load_as_router
 
-def load_nife(name: str, teacher_name: str | None = None) -> SentenceTransformer:
-    """
-    Load a SentenceTransformer model from the Hugging Face Hub.
+model = load_as_router("stephantulkens/nife-mxbai-base")
+# Use the fast model
+query = model.encode_query("hello")
+# Use the slow model
+docs = model.encode_document("hello")
 
-    Args:
-        name: The name of the model to load.
-        teacher_name: The name of the teacher model. If this is None, it will be inferred from the model's metadata.
-            We recommend to leave this as None, because it is easy to get wrong.
-
-    Returns:
-        SentenceTransformer: The loaded model.
-
-    Raises:
-        ValueError: If the dimensionality of the teacher and student models do not match.
-
-    """
-    teacher_name = teacher_name or _get_teacher_from_metadata(name)
-    big_model = SentenceTransformer(teacher_name)
-    small_model = SentenceTransformer(name)
-
-    # Ensure that both models have the same dimensionality.
-    big_dim = big_model.get_sentence_embedding_dimension()
-    small_dim = small_model.get_sentence_embedding_dimension()
-    if big_dim != small_dim:
-        raise ValueError(
-            f"Dimensionality mismatch between teacher ({big_dim}) and student ({small_dim}). "
-            "Please check that you have the correct teacher model."
-        )
-
-    router = Router.for_query_document(query_modules=[small_model], document_modules=[big_model])  # type: ignore
-    return SentenceTransformer(modules=[router])
-
-model = load_nife("")
+print(model.similarity(query, docs))
+# Same result as above in the quickstart.
+# tensor([[0.9377]])
 
 ```
 
@@ -156,7 +107,7 @@ model = load_nife("")
 
 For retrieval using dense models, the normal mode of operation is to embed your documents, and put them in some index. Then, using that same model, also embed your queries. In general, larger embedding models are better than smaller models, so you're often better off by making your embedder as large as possible. This however, makes inference more difficult; you need to host a larger model, and embedding queries might take longer.
 
-For sparse models, like [SPLADE](https://arxiv.org/pdf/2107.05720), there is an interesting alternative, which they call doc-SPLADE, and which sentence transformers calls inference free_. In doc-SPLADE, you only embed using the full model for documents in your index. When querying, you just index the sparse index using the tokenizer.
+For sparse models, like [SPLADE](https://arxiv.org/pdf/2107.05720), there is an interesting alternative, which they call doc-SPLADE, and which sentence transformers calls _inference free_. In doc-SPLADE, you only embed using the full model for documents in your index. When querying, you just index the sparse index using the tokenizer.
 
 NIFE is the answer to the question: what would inference free dense retrieval be? It is called _Nearly_ Inference Free, because you still need to have some mapping from tokens to embeddings.
 
