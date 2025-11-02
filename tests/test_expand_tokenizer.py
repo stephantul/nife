@@ -3,7 +3,8 @@ from typing import List
 from skeletoken import TokenizerModel
 from transformers import PreTrainedTokenizerFast
 
-from nife.tokenizer.expand import FreqTuple, _add_tokens_to_tokenizer, _prune_tokenizer, expand_tokenizer
+from nife.tokenizer.datamodels import VocabItem
+from nife.tokenizer.expand import _add_tokens_to_tokenizer, _prune_tokenizer, expand_tokenizer
 
 
 def test_prune_noop_with_empty_data(test_tokenizer: PreTrainedTokenizerFast) -> None:
@@ -26,8 +27,13 @@ def test_prune_high_threshold_reduces_vocab(test_tokenizer: PreTrainedTokenizerF
 
     # Use a few common short tokens as data entries; counts are small so a
     # high threshold will tend to mark many subword ids for removal.
-    data: list[FreqTuple] = [("a", 1), ("b", 1), ("c", 1), ("xyz", 1)]
-    pruned = _prune_tokenizer(model, data, min_subword_frequency=10_000)
+    dataset: list[VocabItem] = [
+        {"token": "a", "frequency": 1},
+        {"token": "b", "frequency": 1},
+        {"token": "c", "frequency": 1},
+        {"token": "xyz", "frequency": 1},
+    ]
+    pruned = _prune_tokenizer(model, dataset, min_subword_frequency=10_000)
     assert isinstance(pruned, TokenizerModel)
     assert pruned.vocabulary_size <= orig_size
 
@@ -38,7 +44,11 @@ def test_expand_adds_and_filters(test_tokenizer: PreTrainedTokenizerFast) -> Non
     original_vocab = tokenizer.get_vocab()
     original_size = len(original_vocab)
 
-    data: list[FreqTuple] = [("12345", 1000), ("hello_new", 500), ("world_new", 400)]
+    data: list[VocabItem] = [
+        {"token": "12345", "frequency": 1000},
+        {"token": "hello_new", "frequency": 500},
+        {"token": "world_new", "frequency": 400},
+    ]
 
     # Adding tokens without filtering should allow non-numeric tokens to be added
     new_tokenizer = expand_tokenizer(
@@ -62,9 +72,8 @@ def test_add_tokens_noop_when_target_reached(test_tokenizer: PreTrainedTokenizer
     model = TokenizerModel.from_transformers_tokenizer(tokenizer)
     orig_size = model.vocabulary_size
 
-    returned = _add_tokens_to_tokenizer(
-        model, data=[("x", 1), ("y", 2)], filter_numbers=False, new_vocab_size=orig_size
-    )
+    dataset: List[VocabItem] = [{"token": "x", "frequency": 1}, {"token": "y", "frequency": 2}]
+    returned = _add_tokens_to_tokenizer(model, dataset=dataset, filter_numbers=False, new_vocab_size=orig_size)
     assert isinstance(returned, TokenizerModel)
     assert returned.vocabulary_size == orig_size
 
@@ -75,8 +84,12 @@ def test_add_tokens_adds_non_numeric(test_tokenizer: PreTrainedTokenizerFast) ->
     model = TokenizerModel.from_transformers_tokenizer(tokenizer)
     orig_size = model.vocabulary_size
 
-    data: List[FreqTuple] = [("new_one", 100), ("new_two", 90), ("123", 200)]
-    returned = _add_tokens_to_tokenizer(model, data=data, filter_numbers=True, new_vocab_size=orig_size + 2)
+    data: List[VocabItem] = [
+        {"token": "token_one", "frequency": 10},
+        {"token": "token_two", "frequency": 5},
+        {"token": "1234", "frequency": 20},
+    ]
+    returned = _add_tokens_to_tokenizer(model, dataset=data, filter_numbers=True, new_vocab_size=orig_size + 2)
     assert isinstance(returned, TokenizerModel)
     assert returned.vocabulary_size >= orig_size + 1
 
@@ -87,8 +100,8 @@ def test_add_tokens_filter_all_numbers(test_tokenizer: PreTrainedTokenizerFast) 
     model = TokenizerModel.from_transformers_tokenizer(tokenizer)
     orig_size = model.vocabulary_size
 
-    data: List[FreqTuple] = [("123", 10), ("456", 5)]
-    returned = _add_tokens_to_tokenizer(model, data=data, filter_numbers=True, new_vocab_size=orig_size + 2)
+    data: List[VocabItem] = [{"token": "123", "frequency": 10}, {"token": "456", "frequency": 5}]
+    returned = _add_tokens_to_tokenizer(model, dataset=data, filter_numbers=True, new_vocab_size=orig_size + 2)
     assert isinstance(returned, TokenizerModel)
     assert returned.vocabulary_size == orig_size
 
@@ -102,9 +115,9 @@ def test_add_tokens_skips_existing_tokens(test_tokenizer: PreTrainedTokenizerFas
     # pick an existing token from the underlying tokenizer vocabulary
     hf_vocab = tokenizer.get_vocab()
     existing = next(iter(hf_vocab.keys()))
-    data: List[FreqTuple] = [(existing, 100), ("brand_new_token", 50)]
+    data: List[VocabItem] = [{"token": existing, "frequency": 100}, {"token": "brand_new_token", "frequency": 50}]
 
-    returned = _add_tokens_to_tokenizer(model, data=data, filter_numbers=False, new_vocab_size=orig_size + 1)
+    returned = _add_tokens_to_tokenizer(model, dataset=data, filter_numbers=False, new_vocab_size=orig_size + 1)
     assert isinstance(returned, TokenizerModel)
     # either brand_new_token was added or the vocabulary size remains same if skipped
     assert returned.vocabulary_size >= orig_size
@@ -116,11 +129,11 @@ def test_expand_invokes_prune_branch(test_tokenizer: PreTrainedTokenizerFast) ->
     original_vocab = tokenizer.get_vocab()
     original_size = len(original_vocab)
 
-    data: List[FreqTuple] = [("a", 1), ("b", 1)]
+    data: List[VocabItem] = [{"token": "a", "frequency": 1}, {"token": "b", "frequency": 1}]
 
     # Set new_vocab_size to current size so no tokens are added; this ensures
     # expand_tokenizer will call _prune_tokenizer (min_subword_frequency > 0)
     new_tokenizer = expand_tokenizer(
-        tokenizer, data, min_subword_frequency=1, new_vocab_size=original_size, filter_numbers=False
+        tokenizer, dataset=data, min_subword_frequency=1, new_vocab_size=original_size, filter_numbers=False
     )
     assert isinstance(new_tokenizer, PreTrainedTokenizerFast)

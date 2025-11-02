@@ -1,6 +1,5 @@
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
-from typing import Iterator, cast
 
 from datasets import Dataset
 from transformers import AutoTokenizer
@@ -38,12 +37,11 @@ if __name__ == "__main__":
         [Path(p) for p in parsed_args.datasets], in_memory=in_memory, columns_to_keep={text_column_name}
     )
 
-    records = cast(Iterator[dict[str, str]], iter(data))
-    vocab_map = count_tokens_in_dataset(
+    records = (x[text_column_name] for x in iter(data))
+    vocab_items = count_tokens_in_dataset(
         tokenizer=tokenizer,
         data=records,
         total=total,
     )
-    # Vocab map is a list of tuples, sorted by frequency.
-    dataset = Dataset.from_list(vocab_map, split="train")  # type: ignore
+    dataset = Dataset.from_list(vocab_items)  # type: ignore  # datasets typing issue
     dataset.save_to_disk(parsed_args.output)
