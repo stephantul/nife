@@ -2,41 +2,73 @@
 <h2 align="center">
   <img width="35%" alt="A man shooting a thing to the ground." src="https://github.com/stephantul/nife/blob/main/assets/william-blake.jpg"><br/>
 </h2>
-<h1 align="center"> (k)NIFE </h2>
+<h1 align="center"> NIFE </h1>
 
-This is the repository for training Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. NIFE allows you to:
+NIFE compresses large embedding models into static, drop-in replacements with up to 200x faster query embedding [see benchmarks]().
 
-1. Use a much smaller model during querying. 400x embed time speed-up on CPU.
-2. Use a much smaller memory/compute footprint. Create embeddings in your DB service.
-3. Use the same index as your big model. Switch dynamically between your big model and the NIFE model.
+# Features
+
+- 200x faster CPU query embedding
+- Fully aligned with their teacher models
+- Re-use your existing vector index
+
+# Quickstart
+
+This snippet loads [`stephantulkens/nife-mxbai-base`](), which is aligned with [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1). Use it in any spot where you use `mixedbread-ai/mxbai-embed-large-v1`.
+
+```python
+from nife import load_nife
+
+model = load_nife("stephantulkens/nife-mxbai-base")
+query_vec = model.encode_query(["What is the capital of France?"])
+
+# Four cities near France
+index_doc = model.encode_document(["Paris is a nice city", "I love Lyon", "Antwerp is really great", "Berlin is pretty gloomy in winter"])
+
+similarity = model.similarity(query_vec, index_doc)
+print(similarity)
+# It correctly retrieved Paris
+# tensor([[0.6981, 0.5797, 0.5822, 0.4959]])
+
+```
+
+# Introduction
+
+This is the repository for training Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. Because static models are so small and fast, NIFE allows you to:
+
+1. Speed up query time immensely: 200x embed time speed-up on CPU.
+2. Get away with using a much smaller memory/compute footprint. Create embeddings in your DB service.
+3. Reuse your big model index: Switch dynamically between your big model and the NIFE model.
 
 ## Use cases
 
-Here's some things you can do with NIFE.
+Here are some possible use-cases for NIFE:
 
-### Search engine
+1. Search engine
 
 You have a search engine and want to offer both a fast path and slow path to your customers. The fast path computes the query using the NIFE model, the slow path computes it using the slow model. Your customers pay less for the NIFE model. You can use the same document index for both models, so there's no overhead to deploying NIFE.
 
-### RAG
+2. RAG
 
 Your agent sometimes needs to retrieve large sets of documents and you want to get this context to the agent as fast as possible. You are bound to using relatively low amounts of compute. A NIFE model can run on a toaster, so you run a small server next to your agent that lets it compute embeddings really quickly.
 
-### On the fly document comparisons
+3. On the fly document comparisons
 
 You have a very fast pipeline of incoming documents for which you need to compute similarities, e.g., to detect near duplicates. You can compute your corpus using the big transformer, but when new documents come in, you use the NIFE model to create vectors.
 
-### Free additional features
+4. Free additional features
 
 NIFE models compute different things than their teacher models, so they can be used as an additional source of information during ranking.
 
 # Usage
 
-A NIFE model is just a [sentence transformer](https://github.com/huggingface/sentence-transformers) router model, so you don't need to install anything except that. Nevertheless, NIFE contains some helper functions for loading a model trained with NIFE. As an example, we'll load our base model [], which was trained using [mixedbread-ai/mxbai-embed-large-v1](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1) as a teacher.
+A NIFE model is just a [sentence transformer](https://github.com/huggingface/sentence-transformers) router model, so you don't need to install anything except that. Nevertheless, NIFE contains some helper functions for loading a model trained with NIFE. As an example, we'll load our base model [], which was trained using [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1) as a teacher.
 
-Note that in all cases the teacher model is unchanged; so if you have a large set of documents indexe with the teacher model, you can use the NIFE model as a drop-in replacement.
+Note that in all cases the teacher model is unchanged; so if you have a large set of documents indexed with the teacher model, you can use the NIFE model as a drop-in replacement.
 
 ## Usage with NIFE
+
+Here's how to use NIFE.
 
 ```python
 from nife import load_nife
@@ -55,7 +87,7 @@ similarity = query_vector @ index.T
 
 ## Usage with sentence-transformers
 
-This is just the snipper from the `nife` library. Use this is if you don't feel like downloading `nife`.
+This is just the snippet from the `nife` library. Use this is if you don't want to download `nife`.
 
 ```python
 from pathlib import Path
@@ -126,7 +158,7 @@ For retrieval using dense models, the normal mode of operation is to embed your 
 
 For sparse models, like [SPLADE](https://arxiv.org/pdf/2107.05720), there is an interesting alternative, which they call doc-SPLADE, and which sentence transformers calls inference free_. In doc-SPLADE, you only embed using the full model for documents in your index. When querying, you just index the sparse index using the tokenizer.
 
-NIFE is the answer to the question: what would inference-free dense retrieval be? It is called _Nearly_ Inference Free, because you still need to have some mapping from tokens to embeddings.
+NIFE is the answer to the question: what would inference free dense retrieval be? It is called _Nearly_ Inference Free, because you still need to have some mapping from tokens to embeddings.
 
 See this table:
 
@@ -161,13 +193,16 @@ To create a NIFE model, you can run the scripts in `scripts`, or directly use th
 * [mixedbread-ai/mxbai-embed-large-v1](https://huggingface.co/collections/stephantulkens/mxbai-large-v1-embedpress)
 * [Alibaba-NLP/gte-modernbert-base](https://huggingface.co/collections/stephantulkens/gte-modernbert-embedpress)
 
-Let's assume you have some dataset you want to create embeddings for. This works as follows:
+Broadly construed, training a NIFE model has 5 separate steps.
+
+## 1. Create a set of embeddings using the teacher
+
+Let's assume we want to create embeddings on [trivia QA](https://huggingface.co/mandarjoshi/trivia_qa), using `mxbai-embed-large-v1` as a teacher.
 
 ```python
 from datasets import load_dataset
 from nife.distillation.infer import generate_and_save_embeddings
 from sentence_transformers import SentenceTransformer
-
 
 model_name = "mixedbread-ai/mxbai-embed-large-v1"
 model = SentenceTransformer(model_name)
@@ -194,12 +229,110 @@ generate_and_save_embeddings(
 
 ```
 
-After a while, your dataset will be ready and saved as parquet files in `output_directory`. If you want to upload these, please use the `HfAPI`, not `dataset.push_to_hub`.
+This piece of code loads the model, the dataset and then starts inference. Inference takes a while, and will stream snippets to disk as .txt files and torch tensor files. After the whole dataset has been inferenced, the .txt and tensor files are converted into parquet files, and the .txt and torch tensor files are deleted.
 
-You can then train on this using the script in the scripts folder.
+Your dataset will be ready and saved as parquet files in `output_directory`. If you want to upload these, please use the `HfAPI`, not `dataset.push_to_hub`, because we rely on some metadata embedded in the README to infer the base model later on. Note that the dataset iterator can be anything, and does not need to be a Hugging Face dataset. For example, it could also work with a stream from your database.
 
-```bash
-python3 scripts/experiment_distillation.py my-new-model --train-dataset output_directory
+For a simple inference script with a lot of pre-made datasets, see [the infer_datasets script](./scripts/infer_datasets.py).
+
+## 2. (optional) Expanding a tokenizer
+
+NIFE models work really well if you create a custom tokenizer for your domain. Empirically, it also works really well if you just expand the tokenizer of your teacher model with additional words. We call this _tokenizer expansion_. We have a pre-defined corpus to work on:
+
+```python
+from transformers import AutoTokenizer
+
+from datasets import load_dataset
+from nife.tokenizer.expand_tokenizer import expand_tokenizer
+
+
+dataset = load_dataset("stephantulkens/msmarco-vocab", split="train")
+print(dataset.tolist()[:5])
+# [{'token': '.', 'frequency': 36174594, 'document_frequency': 8701009},
+# {'token': 'the', 'frequency': 28806701, 'document_frequency': 7712172},
+# {'token': ',', 'frequency': 25825435, 'document_frequency': 7411743},
+# {'token': 'of', 'frequency': 15196930, 'document_frequency': 6562023},
+# {'token': 'a', 'frequency': 13702107, 'document_frequency': 6064770},
+
+tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+# Function expects an iterator over dictionaries with "token" and "frequency" as keys.
+new_tokenizer = expand_tokenizer(tokenizer, data, new_vocabulary_size=30000)
+new_tokenizer.save_pretrained("my_tokenizer")
+
+```
+
+This will do a couple of things:
+1) It will remove all tokens from the original tokenizer that aren't present in your data.
+2) It will then add the most frequent tokens until the size of the tokenizer == `new_vocabulary_size`.
+
+This works a lot better than training a tokenizer from scratch on equivalent data. For a runnable version, see [the expand_tokenizer script](./scripts/expand_tokenizer.py).
+
+To get frequency counts, you can use `count_tokens_in_dataset`, as follows:
+
+```python
+from datasets import load_dataset, Dataset
+
+from nife.tokenizer.count_vocabulary import count_tokens_in_dataset
+
+dataset = load_dataset("sentence-transformers/msmarco", "corpus", split="train", streaming=True)
+dataset_iterator = (item["passage"] for item in dataset)
+counts = count_tokens_in_dataset(dataset_iterator)
+
+# Save the counts as a dataset if you want.
+dataset = Dataset.from_list(counts, split="train")
+dataset.push_to_hub("my_hub")
+
+```
+
+This dataset can be used directly to expand your tokenizer, above. For a runnable version, see [the create_vocabulary script](./scripts/create_vocabulary.py)
+
+## 3. Train
+
+Given a dataset and optionally a tokenizer, there's two steps to complete for a successful training.
+
+### 3a Initialize a static model using your teacher
+
+Using *your teacher model*, initialize a static model. For example, when using [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1):
+
+```python
+from sentence_transformers import SentenceTransformer
+from transformers import AutoTokenizer
+
+from nife.initialization import initialize_from_model
+
+teacher = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
+# The tokenizer you trained in step 2. or an off-the-shelf tokenizer.
+tokenizer = AutoTokenizer.from_pretrained("my_tokenizer")
+model = initialize_from_model(teacher, tokenizer)
+
+```
+
+### 3b Actually train
+
+Now you can train, just like a regular sentence transformer. In my experiments, I found that using the cosine distance as a loss function was superior to using MSE, so I recommend using that, find it in `nife.losses`. In addition, I also recommend using [Matryoshka Representation Learning](https://arxiv.org/abs/2205.13147). There's a bunch of helper functions in `nife` to make training easier. In general, I recommend using hyperparameters like the following:
+
+* `batch_size`: 128
+* `learning rate`: 0.01
+* `scheduler`: "cosine_warmup_with_min_lr"
+* `warmup_ratio`: 0.1
+* `weight_decay`: 0.01
+* `epochs`: 5
+
+It can be tempting to move to very high batch sizes, but this has a very large detrimental effect on performance, even with higher learning rates. As a consequence, GPU usage during training is actually pretty low, because there's very little actual computation happening. For a complete runnable training loop, including model initialization, see [the training script](./scripts/experiment_distillation.py).
+
+```python
+from nife.losses import CosineLoss
+from nife.data import get_datasets
+
+# Fill with datasets you trained yourself.
+datasets_you_made = [""]
+train_dataset = get_datasets(datasets_you_made)
+
+# Model is initialized in step 3a.
+loss = CosineLoss(model=model)
+
+# Train as usual.
+
 ```
 
 This will train a model and report the result to wandb. The `experiment_distillation` script is otherwise completely the same as a regular sentence transformers training loop, so there's very little actual code involved.
