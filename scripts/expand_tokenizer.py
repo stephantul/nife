@@ -1,20 +1,13 @@
 import logging
 from argparse import ArgumentParser, Namespace
 from collections import defaultdict
-from collections.abc import Iterator
-from typing import TypedDict, cast
 
-from datasets import load_dataset
+from datasets import concatenate_datasets, load_dataset
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
 from nife.tokenizer.expand import expand_tokenizer
 
 logger = logging.getLogger(__name__)
-
-
-class VocabItem(TypedDict):
-    token: str
-    frequency: int
 
 
 def _parse_args() -> Namespace:
@@ -28,7 +21,7 @@ def _parse_args() -> Namespace:
         nargs="+",
         help="Path to one or more vocabulary datasets. This is a dataset with a 'token' column, sorted by frequency.",
     )
-    parser.add_argument("--vocab-size", type=int, default=30000, help="New vocabulary size after expansion.")
+    parser.add_argument("--vocab-size", type=int, default=100_000, help="New vocabulary size after expansion.")
     parser.add_argument(
         "--min-subword-frequency", type=int, default=10, help="Minimum frequency for subwords to be included."
     )
@@ -44,19 +37,15 @@ if __name__ == "__main__":
 
     counts: dict[str, int] = defaultdict(int)
 
+    datasets = []
     for dataset in parsed_args.vocabulary_data:
         ds = load_dataset(dataset, split="train")
-        item: VocabItem
-        for item in cast(Iterator[VocabItem], ds):
-            token = item["token"]
-            frequency = item["frequency"]
-            counts[token] += frequency
-
-    data: list[tuple[str, int]] = sorted(counts.items(), key=lambda x: x[1], reverse=True)
+        datasets.append(ds)
+    dataset = concatenate_datasets(datasets)
 
     new_tokenizer = expand_tokenizer(
         tokenizer=tokenizer,
-        data=data,
+        dataset=dataset,
         new_vocab_size=parsed_args.vocab_size,
         filter_numbers=parsed_args.filter_numbers,
         min_subword_frequency=parsed_args.min_subword_frequency,

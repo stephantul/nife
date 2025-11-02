@@ -1,21 +1,11 @@
-import concurrent.futures
 from argparse import ArgumentParser, Namespace
-from collections import Counter
 from pathlib import Path
 
 from datasets import Dataset
-from skeletoken import TokenizerModel
-from skeletoken.preprocessor import Preprocessor
-from tqdm import tqdm
+from transformers import AutoTokenizer
 
 from nife.data import get_datasets
-
-
-def _process_example(example) -> tuple[Counter[str], set[str]]:
-    """Process a single example to count tokens."""
-    text = example["text"]
-    tokens = preprocessor.preprocess(text)
-    return Counter(tokens), set(tokens)
+from nife.tokenizer.count_vocabulary import count_tokens_in_dataset
 
 
 def _parse_args() -> Namespace:
@@ -38,26 +28,20 @@ def _parse_args() -> Namespace:
 
 if __name__ == "__main__":
     parsed_args = _parse_args()
-    tokenizer_model = TokenizerModel.from_pretrained(parsed_args.model_name)
-    preprocessor = Preprocessor.from_tokenizer_model(tokenizer_model)
     text_column_name: str = parsed_args.text_column_name
     in_memory = bool(parsed_args.in_memory)
+
+    tokenizer = AutoTokenizer.from_pretrained(parsed_args.model_name, use_fast=True)
+
     data, total = get_datasets(
         [Path(p) for p in parsed_args.datasets], in_memory=in_memory, columns_to_keep={text_column_name}
     )
 
-    counts: Counter[str] = Counter()
-    df: Counter[str] = Counter()
-
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        for item in tqdm(executor.map(_process_example, data), total=total):
-            token_counter, token_set = item
-            counts.update(token_counter)
-            df.update(token_set)
-
-    toks, token_counts = zip(*sorted(counts.items(), key=lambda x: x[1], reverse=True))
-    token_dfs = [df[t] for t in toks]
-
-    d = {"token": toks, "frequency": token_counts, "document_frequency": token_dfs}
-    dataset = Dataset.from_dict(d)
+    records = (x[text_column_name] for x in iter(data))
+    vocab_items = count_tokens_in_dataset(
+        tokenizer=tokenizer,
+        data=records,
+        total=total,
+    )
+    dataset = Dataset.from_list(vocab_items)  # type: ignore  # datasets typing issue
     dataset.save_to_disk(parsed_args.output)

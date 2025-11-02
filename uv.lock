@@ -1058,7 +1058,7 @@ requires-dist = [
     { name = "pytest-coverage", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "sentence-transformers" },
-    { name = "skeletoken", git = "https://github.com/stephantul/skeletoken.git" },
+    { name = "skeletoken", specifier = ">=0.2.2" },
     { name = "transformers", extras = ["torch"] },
     { name = "wandb" },
 ]
@@ -2405,13 +2405,17 @@ wheels = [
 
 [[package]]
 name = "skeletoken"
-version = "0.2.1"
-source = { git = "https://github.com/stephantul/skeletoken.git#2e0745e8337d73fab4212abb55d13f98cadabe53" }
+version = "0.2.2"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "protobuf" },
     { name = "pydantic" },
     { name = "tokenizers" },
     { name = "transformers" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/99/eb/6380e0c9e7dd32b79b38c3d2afac67b6c39cb3c776b02dae31ea8e7aef80/skeletoken-0.2.2.tar.gz", hash = "sha256:26d4c3983e76fb8d22fc75efb79d203fdc7f42447d73a334d024593238cf84e9", size = 215711, upload-time = "2025-11-01T13:47:57.309Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/fc/f1/19533bbabd5eb0d77e7eeccc01ebd2f0c4e8f540b27907004076a255ce30/skeletoken-0.2.2-py3-none-any.whl", hash = "sha256:ff07cc58bdc2e8be87bfb3be8d993a0b88e00425857c64be72df7dbca6be3fb3", size = 32497, upload-time = "2025-11-01T13:47:55.853Z" },
 ]
 
 [[package]]

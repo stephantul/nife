@@ -1,4 +1,19 @@
-from nife.utilities import batchify
+import pytest
+
+from nife.utilities import batchify, iterable_iterator_dispatch
+
+
+@pytest.mark.parametrize(
+    "data, result",
+    [
+        ([1, 2, 3], [1, 2, 3]),
+        (iter(range(3)), [0, 1, 2]),
+    ],
+)
+def test_iterable_iterator_dispatch(data, result) -> None:
+    """Test iterable_iterator_dispatch with an iterable."""
+    i1 = iterable_iterator_dispatch(data)
+    assert list(i1) == result
 
 
 def test_batchify_with_list() -> None:

@@ -11,11 +11,17 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
+def iterable_iterator_dispatch(
+    stream: Iterable[T] | Iterator[T],
+) -> Iterator[T]:
+    """Convert an iterable or iterator into an iterator."""
+    return iter(stream)
+
+
 def batchify(stream: Iterator[T] | Iterable[T], batch_size: int) -> Iterator[list[T]]:
     """Turn an iterator over something into batches."""
     # If we got an iterable, turn it into an iterator
-    if isinstance(stream, Iterable):
-        stream = iter(stream)
+    stream = iterable_iterator_dispatch(stream)
 
     batch: list[T] = []
     while True:
