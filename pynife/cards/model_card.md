@@ -134,5 +134,13 @@ print(similarity)
 ### BibTeX
 
 ```bibtex
-
+@software{Tulkens2025pyNIFE,
+  author       = {St\'{e}phan Tulkens},
+  title        = {pyNIFE: nearly inference free embeddings in python},
+  year         = {2025},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.17512919},
+  url          = {https://github.com/stephantulkens/pynife},
+  license      = {MIT},
+}
 ```
