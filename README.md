@@ -1,6 +1,6 @@
 
 <h2 align="center">
-  <img width="35%" alt="A man shooting a thing to the ground." src="https://github.com/stephantul/nife/blob/main/assets/william-blake.jpg"><br/>
+  <img width="35%" alt="A man shooting a thing to the ground." src="https://github.com/stephantul/pynife/blob/main/assets/william-blake.jpg"><br/>
 </h2>
 <h1 align="center"> pyNIFE </h1>
 
@@ -8,10 +8,10 @@
   <h2>
     <a href="https://pypi.org/project/pynife/"><img src="https://img.shields.io/pypi/v/pynife?color=f29bdb" alt="Package version">
 </a>
-    <a href="https://codecov.io/gh/stephantul/nife" >
-      <img src="https://codecov.io/gh/stephantul/nife/graph/badge.svg?token=DD8BK7OZHG"/>
+    <a href="https://codecov.io/gh/stephantul/pynife" >
+      <img src="https://codecov.io/gh/stephantul/pynife/graph/badge.svg?token=DD8BK7OZHG"/>
     </a>
-    <a href="https://github.com/stephantul/nife/blob/main/LICENSE">
+    <a href="https://github.com/stephantul/pynife/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-green" alt="License - MIT">
     </a>
 </div>
@@ -79,7 +79,7 @@ pip install pynife
 
 ## Usage
 
-A NIFE model is just a [sentence transformer](https://github.com/huggingface/sentence-transformers) router model, so you don't need to install `nife` to use NIFE models. Nevertheless, NIFE contains some helper functions for loading a model trained with NIFE.
+A NIFE model is just a [sentence transformer](https://github.com/huggingface/sentence-transformers) router model, so you don't need to install `pynife` to use NIFE models. Nevertheless, NIFE contains some helper functions for loading a model trained with NIFE.
 
 Note that with all NIFE models the teacher model is unchanged; so if you have a large set of documents indexed with the teacher model, you can use the NIFE model as a drop-in replacement.
 
@@ -96,10 +96,10 @@ X = model.encode(["What is the capital of France?"])
 
 ### As a router
 
-You can also use the small model and big model together as a single [router](https://sbert.net/docs/package_reference/sentence_transformer/models.html#sentence_transformers.models.Router) using a helper function from `nife`. This is useful for benchmarking; in production you should probably use the query model by itself.
+You can also use the small model and big model together as a single [router](https://sbert.net/docs/package_reference/sentence_transformer/models.html#sentence_transformers.models.Router) using a helper function from `pynife`. This is useful for benchmarking; in production you should probably use the query model by itself.
 
 ```python
-from nife import load_as_router
+from pynife import load_as_router
 
 model = load_as_router("stephantulkens/NIFE-mxbai-embed-large-v1")
 # Use the fast model
@@ -162,7 +162,7 @@ Let's assume we want to create embeddings on [trivia QA](https://huggingface.co/
 
 ```python
 from datasets import load_dataset
-from nife.distillation.infer import generate_and_save_embeddings
+from pynife.distillation.infer import generate_and_save_embeddings
 from sentence_transformers import SentenceTransformer
 
 model_name = "mixedbread-ai/mxbai-embed-large-v1"
@@ -204,7 +204,7 @@ NIFE models work really well if you create a custom tokenizer for your domain. E
 from transformers import AutoTokenizer
 
 from datasets import load_dataset
-from nife.tokenizer.expand_tokenizer import expand_tokenizer
+from pynife.tokenizer.expand_tokenizer import expand_tokenizer
 
 
 dataset = load_dataset("stephantulkens/msmarco-vocab", split="train")
@@ -233,7 +233,7 @@ To get frequency counts, you can use `count_tokens_in_dataset`, as follows:
 ```python
 from datasets import load_dataset, Dataset
 
-from nife.tokenizer.count_vocabulary import count_tokens_in_dataset
+from pynife.tokenizer.count_vocabulary import count_tokens_in_dataset
 
 dataset = load_dataset("sentence-transformers/msmarco", "corpus", split="train", streaming=True)
 dataset_iterator = (item["passage"] for item in dataset)
@@ -259,7 +259,7 @@ Using *your teacher model*, initialize a static model. For example, when using [
 from sentence_transformers import SentenceTransformer
 from transformers import AutoTokenizer
 
-from nife.initialization import initialize_from_model
+from pynife.initialization import initialize_from_model
 
 teacher = SentenceTransformer("mixedbread-ai/mxbai-embed-large-v1")
 # The tokenizer you trained in step 2. or an off-the-shelf tokenizer.
@@ -270,7 +270,7 @@ model = initialize_from_model(teacher, tokenizer)
 
 #### 3b Actually train
 
-Now you can train, just like a regular sentence transformer. In my experiments, I found that using the cosine distance as a loss function was superior to using MSE, so I recommend using that, find it in `nife.losses`. In addition, I also recommend using [Matryoshka Representation Learning](https://arxiv.org/abs/2205.13147). There's a bunch of helper functions in `nife` to make training easier. In general, I recommend using hyperparameters like the following:
+Now you can train, just like a regular sentence transformer. In my experiments, I found that using the cosine distance as a loss function was superior to using MSE, so I recommend using that, find it in `pynife.losses`. In addition, I also recommend using [Matryoshka Representation Learning](https://arxiv.org/abs/2205.13147). There's a bunch of helper functions in `pynife` to make training easier. In general, I recommend using hyperparameters like the following:
 
 * `batch_size`: 128
 * `learning rate`: 0.01
@@ -282,8 +282,8 @@ Now you can train, just like a regular sentence transformer. In my experiments, 
 It can be tempting to move to very high batch sizes, but this has a very large detrimental effect on performance, even with higher learning rates. As a consequence, GPU usage during training is actually pretty low, because there's very little actual computation happening. For a complete runnable training loop, including model initialization, see [the training script](./scripts/experiment_distillation.py).
 
 ```python
-from nife.losses import CosineLoss
-from nife.data import get_datasets
+from pynife.losses import CosineLoss
+from pynife.data import get_datasets
 
 # Fill with datasets you trained yourself.
 datasets_you_made = [""]
