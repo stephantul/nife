@@ -319,6 +319,5 @@ If you use `pynife` or NIFE models in general, please cite this work as follows:
   doi          = {10.5281/zenodo.17512919},
   url          = {https://github.com/stephantulkens/pynife},
   license      = {MIT},
-  note         = {If you use NIFE, please cite the following work.},
 }
 ```
