@@ -71,10 +71,10 @@ This snippet is an example of how you could use it. But in reality you should ju
 
 ## Installation
 
-On [PyPi](https://pypi.org/project/nife/):
+On [PyPi](https://pypi.org/project/pynife/):
 
 ```
-pip install nife
+pip install pynife
 ```
 
 ## Usage

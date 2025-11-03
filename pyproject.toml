@@ -1,5 +1,5 @@
 [project]
-name = "nife"
+name = "pynife"
 description = "Nearly Inference Free embedding models in python"
 readme = "README.md"
 dynamic = ["version"]
