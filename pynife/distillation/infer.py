@@ -12,8 +12,8 @@ from skeletoken import TokenizerModel
 from tqdm import tqdm
 from transformers import BatchEncoding, PreTrainedTokenizerBase, PreTrainedTokenizerFast
 
-from nife.data import build_parquet_shards_from_folder
-from nife.utilities import batchify
+from pynife.data import build_parquet_shards_from_folder
+from pynife.utilities import batchify
 
 logger = logging.getLogger(__name__)
 

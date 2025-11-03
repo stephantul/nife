@@ -4,8 +4,8 @@ from pathlib import Path
 from datasets import Dataset
 from transformers import AutoTokenizer
 
-from nife.data import get_datasets
-from nife.tokenizer.count_vocabulary import count_tokens_in_dataset
+from pynife.data import get_datasets
+from pynife.tokenizer.count_vocabulary import count_tokens_in_dataset
 
 
 def _parse_args() -> Namespace:

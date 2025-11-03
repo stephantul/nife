@@ -1022,49 +1022,6 @@ wheels = [
 ]
 
 [[package]]
-name = "nife"
-source = { editable = "." }
-dependencies = [
-    { name = "datasets" },
-    { name = "jinja2" },
-    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "sentence-transformers" },
-    { name = "skeletoken" },
-    { name = "transformers", extra = ["torch"] },
-    { name = "wandb" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "ipython", version = "9.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
-    { name = "mypy" },
-    { name = "pre-commit" },
-    { name = "pytest" },
-    { name = "pytest-coverage" },
-    { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "datasets" },
-    { name = "ipython", marker = "extra == 'dev'" },
-    { name = "jinja2" },
-    { name = "mypy", marker = "extra == 'dev'" },
-    { name = "numpy" },
-    { name = "pre-commit", marker = "extra == 'dev'" },
-    { name = "pytest", marker = "extra == 'dev'" },
-    { name = "pytest-coverage", marker = "extra == 'dev'" },
-    { name = "ruff", marker = "extra == 'dev'" },
-    { name = "sentence-transformers" },
-    { name = "skeletoken", specifier = ">=0.2.2" },
-    { name = "transformers", extras = ["torch"] },
-    { name = "wandb" },
-]
-provides-extras = ["dev"]
-
-[[package]]
 name = "nodeenv"
 version = "1.9.1"
 source = { registry = "https://pypi.org/simple" }
@@ -1878,6 +1835,49 @@ sdist = { url = "https://files.pythonhosted.org/packages/7c/2d/c3338d48ea6cc0feb
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/0b/9fcc47d19c48b59121088dd6da2488a49d5f72dacf8262e2790a1d2c7d15/pygments-2.19.1-py3-none-any.whl", hash = "sha256:9ea1544ad55cecf4b8242fab6dd35a93bbce657034b0611ee383099054ab6d8c", size = 1225293, upload-time = "2025-01-06T17:26:25.553Z" },
 ]
+
+[[package]]
+name = "pynife"
+source = { editable = "." }
+dependencies = [
+    { name = "datasets" },
+    { name = "jinja2" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.3.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "sentence-transformers" },
+    { name = "skeletoken" },
+    { name = "transformers", extra = ["torch"] },
+    { name = "wandb" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "ipython", version = "8.37.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "ipython", version = "9.3.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "mypy" },
+    { name = "pre-commit" },
+    { name = "pytest" },
+    { name = "pytest-coverage" },
+    { name = "ruff" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "datasets" },
+    { name = "ipython", marker = "extra == 'dev'" },
+    { name = "jinja2" },
+    { name = "mypy", marker = "extra == 'dev'" },
+    { name = "numpy" },
+    { name = "pre-commit", marker = "extra == 'dev'" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pytest-coverage", marker = "extra == 'dev'" },
+    { name = "ruff", marker = "extra == 'dev'" },
+    { name = "sentence-transformers" },
+    { name = "skeletoken", specifier = ">=0.2.2" },
+    { name = "transformers", extras = ["torch"] },
+    { name = "wandb" },
+]
+provides-extras = ["dev"]
 
 [[package]]
 name = "pytest"

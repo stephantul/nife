@@ -7,8 +7,8 @@ from skeletoken import TokenizerModel
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
 
-from nife.tokenizer.datamodels import VocabItem
-from nife.utilities import batchify
+from pynife.tokenizer.datamodels import VocabItem
+from pynife.utilities import batchify
 
 FreqTuple = tuple[str, int]
 DatasetIterable = Iterator[VocabItem] | Iterable[VocabItem]

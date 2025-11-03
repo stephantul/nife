@@ -1,6 +1,6 @@
 from transformers import PreTrainedTokenizerFast
 
-from nife.tokenizer.count_vocabulary import count_tokens_in_dataset
+from pynife.tokenizer.count_vocabulary import count_tokens_in_dataset
 
 
 def test_count_tokens_in_dataset_counts_and_df(test_tokenizer: PreTrainedTokenizerFast) -> None:
