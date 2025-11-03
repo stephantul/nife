@@ -305,3 +305,20 @@ MIT
 ## Author
 
 Stéphan Tulkens
+
+## Citation
+
+If you use `pynife` or NIFE models in general, please cite this work as follows:
+
+```bibtex
+@software{Tulkens2025pyNIFE,
+  author       = {St\'{e}phan Tulkens},
+  title        = {pyNIFE: nearly inference free embeddings in python},
+  year         = {2025},
+  publisher    = {Zenodo},
+  doi          = {10.5281/zenodo.17512919},
+  url          = {https://github.com/stephantulkens/pynife},
+  license      = {MIT},
+  note         = {If you use NIFE, please cite the following work.},
+}
+```
