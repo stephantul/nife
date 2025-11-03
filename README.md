@@ -6,13 +6,13 @@
 
 NIFE compresses large embedding models into static, drop-in replacements with up to 200x faster query embedding [see benchmarks]().
 
-# Features
+## Features
 
 - 200x faster CPU query embedding
 - Fully aligned with their teacher models
 - Re-use your existing vector index
 
-# Introduction
+## Introduction
 
 Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. Because static models are so small and fast, NIFE allows you to:
 
@@ -22,14 +22,14 @@ Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding
 
 Some possible use-cases for NIFE include search engines with slow and fast paths, RAGs in agent loops, and on-the-fly document comparisons.
 
-# Quickstart
+## Quickstart
 
-This snippet loads [`stephantulkens/nife-mxbai-base`](), which is aligned with [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1). Use it in any spot where you use `mixedbread-ai/mxbai-embed-large-v1`.
+This snippet loads [`stephantulkens/NIFE-mxbai-embed-large-v1`](https://huggingface.co/stephantulkens/NIFE-mxbai-embed-large-v1), which is aligned with [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1). Use it in any spot where you use `mixedbread-ai/mxbai-embed-large-v1`.
 
 ```python
 from sentence_transformers import SentenceTransformer
 
-model = SentenceTransformer("stephantulkens/nife-mxbai-base", device="cpu")
+model = SentenceTransformer("stephantulkens/NIFE-mxbai-embed-large-v1", device="cpu")
 # Loads in 41ms.
 query_vec = model.encode(["What is the capital of France?"])
 # Embedding a query takes 90.4 microseconds.
@@ -57,7 +57,7 @@ similarity_queries = model.similarity(big_model_query_vec, query_vec)
 
 This snippet is an example of how you could use it. But in reality you should just use it wherever you encode a query using your teacher model. There's no need to keep the teacher in memory. This makes NIFE extremely flexible, because you can decouple the inference model from the indexing model. Because the models load extremely quickly, they can be used in edge environments and one-off things like lambda functions.
 
-# Installation
+## Installation
 
 On [PyPi](https://pypi.org/project/nife/):
 
@@ -65,13 +65,11 @@ On [PyPi](https://pypi.org/project/nife/):
 pip install nife
 ```
 
-# Usage
+## Usage
 
 A NIFE model is just a [sentence transformer](https://github.com/huggingface/sentence-transformers) router model, so you don't need to install `nife` to use NIFE models. Nevertheless, NIFE contains some helper functions for loading a model trained with NIFE.
 
 Note that with all NIFE models the teacher model is unchanged; so if you have a large set of documents indexed with the teacher model, you can use the NIFE model as a drop-in replacement.
-
-## Usage
 
 ### Standalone
 
@@ -80,8 +78,8 @@ Use just like any other sentence transformer:
 ```python
 from sentence_transformers import SentenceTransformer
 
-model = SentenceTransformer("stephantulkens/nife-mxbai-base", device="cpu")
-X = model.encode(["hello how are you?"])
+model = SentenceTransformer("stephantulkens/NIFE-mxbai-embed-large-v1", device="cpu")
+X = model.encode(["What is the capital of France?"])
 ```
 
 ### As a router
@@ -91,11 +89,11 @@ You can also use the small model and big model together as a single [router](htt
 ```python
 from nife import load_as_router
 
-model = load_as_router("stephantulkens/nife-mxbai-base")
+model = load_as_router("stephantulkens/NIFE-mxbai-embed-large-v1")
 # Use the fast model
-query = model.encode_query("hello")
+query = model.encode_query("What is the capital of France?")
 # Use the slow model
-docs = model.encode_document("hello")
+docs = model.encode_document("What is the capital of France?")
 
 print(model.similarity(query, docs))
 # Same result as above in the quickstart.
@@ -103,7 +101,7 @@ print(model.similarity(query, docs))
 
 ```
 
-# Rationale
+## Rationale
 
 For retrieval using dense models, the normal mode of operation is to embed your documents, and put them in some index. Then, using that same model, also embed your queries. In general, larger embedding models are better than smaller models, so you're often better off by making your embedder as large as possible. This however, makes inference more difficult; you need to host a larger model, and embedding queries might take longer.
 
@@ -146,7 +144,7 @@ To create a NIFE model, you can run the scripts in `scripts`, or directly use th
 
 Broadly construed, training a NIFE model has 5 separate steps.
 
-## 1. Create a set of embeddings using the teacher
+### 1. Create a set of embeddings using the teacher
 
 Let's assume we want to create embeddings on [trivia QA](https://huggingface.co/mandarjoshi/trivia_qa), using `mxbai-embed-large-v1` as a teacher.
 
@@ -186,7 +184,7 @@ Your dataset will be ready and saved as parquet files in `output_directory`. If 
 
 For a simple inference script with a lot of pre-made datasets, see [the infer_datasets script](./scripts/infer_datasets.py).
 
-## 2. (optional) Expanding a tokenizer
+### 2. (optional) Expanding a tokenizer
 
 NIFE models work really well if you create a custom tokenizer for your domain. Empirically, it also works really well if you just expand the tokenizer of your teacher model with additional words. We call this _tokenizer expansion_. We have a pre-defined corpus to work on:
 
@@ -237,11 +235,11 @@ dataset.push_to_hub("my_hub")
 
 This dataset can be used directly to expand your tokenizer, above. For a runnable version, see [the create_vocabulary script](./scripts/create_vocabulary.py)
 
-## 3. Train
+### 3. Train
 
 Given a dataset and optionally a tokenizer, there's two steps to complete for a successful training.
 
-### 3a Initialize a static model using your teacher
+#### 3a Initialize a static model using your teacher
 
 Using *your teacher model*, initialize a static model. For example, when using [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1):
 
@@ -258,7 +256,7 @@ model = initialize_from_model(teacher, tokenizer)
 
 ```
 
-### 3b Actually train
+#### 3b Actually train
 
 Now you can train, just like a regular sentence transformer. In my experiments, I found that using the cosine distance as a loss function was superior to using MSE, so I recommend using that, find it in `nife.losses`. In addition, I also recommend using [Matryoshka Representation Learning](https://arxiv.org/abs/2205.13147). There's a bunch of helper functions in `nife` to make training easier. In general, I recommend using hyperparameters like the following:
 
@@ -288,10 +286,10 @@ loss = CosineLoss(model=model)
 
 This will train a model and report the result to wandb. The `experiment_distillation` script is otherwise completely the same as a regular sentence transformers training loop, so there's very little actual code involved.
 
-# License
+## License
 
 MIT
 
-# Author
+## Author
 
 Stéphan Tulkens

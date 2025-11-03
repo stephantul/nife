@@ -44,18 +44,20 @@ pip install -U NIFE
 Then you can run the model as follows:
 
 ```python
-from nife import load_nife
+from nife import load_as_router
 
-model = load_nife("{{ model_id }}")
+model = load_as_router("{{ model_id }}")
 
-sentences = ["Berlin is amazing", "Paris is a great city", "Brussels is a great city"]
-
-document_embeddings = model.encode_document(sentences, normalize_embeddings=True)
 query = "What is the capital of France?"
-query_embeddings = model.encode(query, normalize_embeddings=True)
+query_embeddings = model.encode_query(query)
 
-similarities = query_embeddings @ document_embeddings.T
-# [0.5704764 , 0.75877744, 0.68366706]
+# Five locales near France
+index_doc = model.encode_document(["Paris is the largest city in France", "Lyon is pretty big", "Antwerp is really great, and in Belgium", "Berlin is pretty gloomy in winter", "France is a country in Europe"])
+
+similarity = model.similarity(query_vec, index_doc)
+print(similarity)
+# It correctly retrieved the document containing the statement about paris.
+# tensor([[0.7065, 0.5012, 0.3596, 0.2765, 0.6648]])
 
 ```
 
@@ -127,51 +129,10 @@ similarities = query_embeddings @ document_embeddings.T
 </details>{% endif %}
 {% endif %}
 
-{%- if co2_eq_emissions %}
-### Environmental Impact
-Carbon emissions were measured using [CodeCarbon](https://github.com/mlco2/codecarbon).
-- **Energy Consumed**: {{ "%.3f"|format(co2_eq_emissions["energy_consumed"]) }} kWh
-- **Carbon Emitted**: {{ "%.3f"|format(co2_eq_emissions["emissions"] / 1000) }} kg of CO2
-- **Hours Used**: {{ co2_eq_emissions["hours_used"] }} hours
-
-### Training Hardware
-- **On Cloud**: {{ "Yes" if co2_eq_emissions["on_cloud"] else "No" }}
-- **GPU Model**: {{ co2_eq_emissions["hardware_used"] or "No GPU used" }}
-- **CPU Model**: {{ co2_eq_emissions["cpu_model"] }}
-- **RAM Size**: {{ "%.2f"|format(co2_eq_emissions["ram_total_size"]) }} GB
-{% endif %}
-### Framework Versions
-- Python: {{ version["python"] }}
-- Sentence Transformers: {{ version["sentence_transformers"] }}
-- Transformers: {{ version["transformers"] }}
-- PyTorch: {{ version["torch"] }}
-- Accelerate: {{ version["accelerate"] }}
-- Datasets: {{ version["datasets"] }}
-- Tokenizers: {{ version["tokenizers"] }}
-
 ## Citation
 
 ### BibTeX
-{% for loss_name, citation in citations.items() %}
-#### {{ loss_name }}
+
 ```bibtex
-{{ citation | trim }}
+
 ```
-{% endfor %}
-<!--
-## Glossary
-
-*Clearly define terms in order to be accessible across audiences.*
--->
-
-<!--
-## Model Card Authors
-
-*Lists the people who create the model card, providing recognition and accountability for the detailed work that goes into its construction.*
--->
-
-<!--
-## Model Card Contact
-
-*Provides a way for people who have updates to the Model Card, suggestions, or questions, to contact the Model Card authors.*
--->

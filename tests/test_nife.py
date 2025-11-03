@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pytest
 from sentence_transformers import SentenceTransformer
 
-from nife.nife import load_nife
+from nife.nife import load_as_router
 from nife.utilities import get_teacher_from_metadata
 
 
@@ -128,7 +128,7 @@ def test_load_nife_success(test_model) -> None:
             new=staticmethod(lambda query_modules, document_modules: DummyRouter(query_modules, document_modules)),
         ),
     ):
-        model = load_nife("small-model")
+        model = load_as_router("small-model")
         assert model == "composed-model"
 
 
@@ -149,4 +149,4 @@ def test_load_nife_dimensionality_mismatch(test_model) -> None:
         patch("nife.nife.SentenceTransformer", new=sentence_transformer_loader),
     ):
         with pytest.raises(ValueError):
-            load_nife("small-model")
+            load_as_router("small-model")

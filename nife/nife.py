@@ -4,7 +4,7 @@ from sentence_transformers.models import Router
 from nife.utilities import get_teacher_from_metadata
 
 
-def load_nife(name: str, teacher_name: str | None = None) -> SentenceTransformer:
+def load_as_router(name: str, teacher_name: str | None = None) -> SentenceTransformer:
     """
     Load a SentenceTransformer model from the Hugging Face Hub.
 
