@@ -1,0 +1,23 @@
+cff-version: 1.2.0
+message: "If you use NIFE, please cite the following work:"
+title: "pyNIFE: nearly inference free embeddings in python"
+authors:
+  - family-names: "Tulkens"
+    given-names: "Stéphan"
+doi: 10.5281/zenodo.17512919
+license: MIT
+url: "https://github.com/stephantulkens/pynife"
+repository-code: "https://github.com/stephantulkens/pynife"
+date-released: "2025-11-03"
+
+preferred-citation:
+  type: software
+  title: "pyNIFE: nearly inference free embeddings in python"
+  authors:
+    - family-names: "Tulkens"
+      given-names: "Stéphan"
+  year: 2025
+  publisher: Zenodo
+  doi: 10.5281/zenodo.17512919
+  url: "https://github.com/stephantulkens/pynife"
+  license: MIT
