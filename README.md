@@ -24,12 +24,12 @@ Some possible use-cases for NIFE include search engines with slow and fast paths
 
 ## Quickstart
 
-This snippet loads [`stephantulkens/nife-mxbai-base`](), which is aligned with [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1). Use it in any spot where you use `mixedbread-ai/mxbai-embed-large-v1`.
+This snippet loads [`stephantulkens/NIFE-mxbai-embed-large-v1`](https://huggingface.co/stephantulkens/NIFE-mxbai-embed-large-v1), which is aligned with [`mixedbread-ai/mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1). Use it in any spot where you use `mixedbread-ai/mxbai-embed-large-v1`.
 
 ```python
 from sentence_transformers import SentenceTransformer
 
-model = SentenceTransformer("stephantulkens/nife-mxbai-base", device="cpu")
+model = SentenceTransformer("stephantulkens/NIFE-mxbai-embed-large-v1", device="cpu")
 # Loads in 41ms.
 query_vec = model.encode(["What is the capital of France?"])
 # Embedding a query takes 90.4 microseconds.
@@ -78,8 +78,8 @@ Use just like any other sentence transformer:
 ```python
 from sentence_transformers import SentenceTransformer
 
-model = SentenceTransformer("stephantulkens/nife-mxbai-base", device="cpu")
-X = model.encode(["hello how are you?"])
+model = SentenceTransformer("stephantulkens/NIFE-mxbai-embed-large-v1", device="cpu")
+X = model.encode(["What is the capital of France?"])
 ```
 
 ### As a router
@@ -89,11 +89,11 @@ You can also use the small model and big model together as a single [router](htt
 ```python
 from nife import load_as_router
 
-model = load_as_router("stephantulkens/nife-mxbai-base")
+model = load_as_router("stephantulkens/NIFE-mxbai-embed-large-v1")
 # Use the fast model
-query = model.encode_query("hello")
+query = model.encode_query("What is the capital of France?")
 # Use the slow model
-docs = model.encode_document("hello")
+docs = model.encode_document("What is the capital of France?")
 
 print(model.similarity(query, docs))
 # Same result as above in the quickstart.
