@@ -4,6 +4,18 @@
 </h2>
 <h1 align="center"> NIFE </h1>
 
+<div align="center">
+  <h2>
+    <a href="https://pypi.org/project/nife/"><img src="https://img.shields.io/pypi/v/nife?color=f29bdb" alt="Package version">
+</a>
+    <a href="https://codecov.io/gh/stephantul/nife" >
+      <img src="https://codecov.io/gh/stephantul/nife/graph/badge.svg?token=DD8BK7OZHG"/>
+    </a>
+    <a href="https://github.com/stephantul/nife/blob/main/LICENSE">
+      <img src="https://img.shields.io/badge/license-MIT-green" alt="License - MIT">
+    </a>
+</div>
+
 NIFE compresses large embedding models into static, drop-in replacements with up to 200x faster query embedding [see benchmarks]().
 
 ## Features
