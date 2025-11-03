@@ -1,7 +1,6 @@
+from pynife.utilities import get_teacher_from_metadata
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.models import Router
-
-from pynife.utilities import get_teacher_from_metadata
 
 
 def load_as_router(name: str, teacher_name: str | None = None) -> SentenceTransformer:

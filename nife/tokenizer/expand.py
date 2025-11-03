@@ -3,12 +3,11 @@ import re
 from collections.abc import Iterable, Iterator
 
 import numpy as np
+from pynife.tokenizer.datamodels import VocabItem
+from pynife.utilities import batchify
 from skeletoken import TokenizerModel
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
-
-from pynife.tokenizer.datamodels import VocabItem
-from pynife.utilities import batchify
 
 FreqTuple = tuple[str, int]
 DatasetIterable = Iterator[VocabItem] | Iterable[VocabItem]

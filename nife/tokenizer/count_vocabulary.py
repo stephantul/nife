@@ -3,13 +3,12 @@ from collections.abc import Iterable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 
+from pynife.tokenizer.datamodels import VocabItem
+from pynife.utilities import iterable_iterator_dispatch
 from skeletoken import TokenizerModel
 from skeletoken.preprocessor import Preprocessor
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
-
-from pynife.tokenizer.datamodels import VocabItem
-from pynife.utilities import iterable_iterator_dispatch
 
 
 def _process_example(example: str, preprocessor: Preprocessor) -> Counter[str]:
