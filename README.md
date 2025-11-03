@@ -6,7 +6,7 @@
 
 <div align="center">
   <h2>
-    <a href="https://pypi.org/project/pynife/"><img src="https://img.shields.io/pypi/v/pynife?color=f29bdb" alt="Package version">
+    <a href="https://pypi.org/project/nife/"><img src="https://img.shields.io/pypi/v/nife?color=f29bdb" alt="Package version">
 </a>
     <a href="https://codecov.io/gh/stephantul/nife" >
       <img src="https://codecov.io/gh/stephantul/nife/graph/badge.svg?token=DD8BK7OZHG"/>
