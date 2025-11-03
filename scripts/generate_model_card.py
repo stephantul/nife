@@ -5,7 +5,7 @@ from typing import Any
 
 from jinja2 import Template
 
-from pynife.cards.model_card import get_model_card_template_path
+from nife.cards.model_card import get_model_card_template_path
 
 
 @dataclass

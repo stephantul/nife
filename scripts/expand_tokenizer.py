@@ -5,7 +5,7 @@ from collections import defaultdict
 from datasets import concatenate_datasets, load_dataset
 from transformers import AutoTokenizer, PreTrainedTokenizerFast
 
-from pynife.tokenizer.expand import expand_tokenizer
+from nife.tokenizer.expand import expand_tokenizer
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from tokenizers import Tokenizer
 
-from pynife.embedding import TrainableStaticEmbedding
+from nife.embedding import TrainableStaticEmbedding
 
 
 def _load_test_tokenizer(path: str = "tests/data/test_tokenizer/tokenizer.json") -> Tokenizer:

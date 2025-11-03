@@ -6,7 +6,7 @@ import torch
 from sentence_transformers import SentenceTransformer
 from transformers import PreTrainedTokenizer
 
-from pynife.distillation.infer import (
+from nife.distillation.infer import (
     _batchify,
     _generate_embeddings,
     _tokenize,
@@ -80,7 +80,7 @@ def test_generate_embeddings_with_max_length_and_limit(mock_write_data, test_mod
     records = iter([{"text": "example1"}, {"text": "example2"}])
     with TemporaryDirectory() as temp_dir:
         # save_every=1 ensures we hit the intermediate save branch, limit_batches=1 triggers stopping
-        from pynife.distillation.infer import _generate_embeddings
+        from nife.distillation.infer import _generate_embeddings
 
         _generate_embeddings(test_model, records, temp_dir, batch_size=1, save_every=1, limit_batches=1, max_length=512)
 
@@ -118,7 +118,7 @@ def test_generate_embeddings_limit_batches_logs_and_writes(mock_tokenize, mock_w
     mock_model.return_value = {"sentence_embedding": torch.tensor([[0.1]])}
 
     records = iter([{"text": "example1"}])
-    from pynife.distillation import infer as infer_mod
+    from nife.distillation import infer as infer_mod
 
     with TemporaryDirectory() as temp_dir:
         # limit_batches=1 will cause the info log and break

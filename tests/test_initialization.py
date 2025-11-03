@@ -1,7 +1,7 @@
 from sentence_transformers import SentenceTransformer
 from transformers import PreTrainedTokenizerFast
 
-from pynife.initialization.model import initialize_from_model
+from nife.initialization.model import initialize_from_model
 
 
 def test_initialize_from_model(test_model: SentenceTransformer, test_tokenizer: PreTrainedTokenizerFast) -> None:

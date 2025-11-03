@@ -4,8 +4,8 @@ from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 
-from pynife.dataset_vault import get_all_dataset_functions
-from pynife.distillation.infer import generate_and_save_embeddings
+from nife.dataset_vault import get_all_dataset_functions
+from nife.distillation.infer import generate_and_save_embeddings
 
 
 def parse_args() -> Namespace:

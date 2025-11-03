@@ -18,11 +18,11 @@ from sentence_transformers.models import Module, Normalize, Router, StaticEmbedd
 from skeletoken import TokenizerModel
 from torch import nn
 
-from pynife.cards.model_card import get_model_card_template_path
-from pynife.data import get_datasets, get_model_name_from_datasets
-from pynife.embedding import TrainableStaticEmbedding
-from pynife.initialization.model import initialize_from_model
-from pynife.losses import LossFunction, select_loss
+from nife.cards.model_card import get_model_card_template_path
+from nife.data import get_datasets, get_model_name_from_datasets
+from nife.embedding import TrainableStaticEmbedding
+from nife.initialization.model import initialize_from_model
+from nife.losses import LossFunction, select_loss
 
 logger = logging.getLogger(__name__)
 

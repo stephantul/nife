@@ -4,7 +4,7 @@ import torch
 from tokenizers import Tokenizer
 from transformers import AutoTokenizer, PreTrainedTokenizer, PreTrainedTokenizerFast
 
-from pynife.embedding import TrainableStaticEmbedding
+from nife.embedding import TrainableStaticEmbedding
 
 T = TypeVar("T", bound=TrainableStaticEmbedding)
 

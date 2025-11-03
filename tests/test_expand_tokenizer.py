@@ -3,8 +3,8 @@ from typing import List
 from skeletoken import TokenizerModel
 from transformers import PreTrainedTokenizerFast
 
-from pynife.tokenizer.datamodels import VocabItem
-from pynife.tokenizer.expand import _add_tokens_to_tokenizer, _prune_tokenizer, expand_tokenizer
+from nife.tokenizer.datamodels import VocabItem
+from nife.tokenizer.expand import _add_tokens_to_tokenizer, _prune_tokenizer, expand_tokenizer
 
 
 def test_prune_noop_with_empty_data(test_tokenizer: PreTrainedTokenizerFast) -> None:
