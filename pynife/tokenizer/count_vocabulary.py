@@ -8,8 +8,8 @@ from skeletoken.preprocessor import Preprocessor
 from tqdm import tqdm
 from transformers import PreTrainedTokenizerFast
 
-from nife.tokenizer.datamodels import VocabItem
-from nife.utilities import iterable_iterator_dispatch
+from pynife.tokenizer.datamodels import VocabItem
+from pynife.utilities import iterable_iterator_dispatch
 
 
 def _process_example(example: str, preprocessor: Preprocessor) -> Counter[str]:

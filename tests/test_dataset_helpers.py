@@ -1,4 +1,4 @@
-from nife.dataset_vault import short_dataset_name
+from pynife.dataset_vault import short_dataset_name
 
 
 def test_short_dataset_name_with_hf_path() -> None:

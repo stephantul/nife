@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from sentence_transformers import SentenceTransformer
 
-from nife.nife import load_as_router
-from nife.utilities import get_teacher_from_metadata
+from pynife.nife import load_as_router
+from pynife.utilities import get_teacher_from_metadata
 
 
 class DummyModelCard:
@@ -48,7 +48,7 @@ def test_get_teacher_from_metadata_local(tmp_path) -> None:
         assert str(path) == str(readme)
         return DummyModelCard(DummyData(base_model="teacher-model"))
 
-    with patch("nife.utilities.ModelCard.load", new=fake_load):
+    with patch("pynife.utilities.ModelCard.load", new=fake_load):
         teacher = get_teacher_from_metadata(tmp_path)
         assert teacher == "teacher-model"
 
@@ -66,8 +66,8 @@ def test_get_teacher_from_metadata_remote_hf_success(tmp_path) -> None:
 
     fake_api = lambda: type("A", (), {"hf_hub_download": staticmethod(fake_download)})()
     with (
-        patch("nife.utilities.HfApi", new=fake_api),
-        patch("nife.utilities.ModelCard.load", new=lambda p: DummyModelCard(DummyData(base_model="teacher-remote"))),
+        patch("pynife.utilities.HfApi", new=fake_api),
+        patch("pynife.utilities.ModelCard.load", new=lambda p: DummyModelCard(DummyData(base_model="teacher-remote"))),
     ):
         teacher = get_teacher_from_metadata("owner/repo")
         assert teacher == "teacher-remote"
@@ -80,7 +80,7 @@ def test_get_teacher_from_metadata_remote_hf_not_found() -> None:
         raise Exception("not found")
 
     fake_api = lambda: type("A", (), {"hf_hub_download": staticmethod(fake_download)})()
-    with patch("nife.utilities.HfApi", new=fake_api):
+    with patch("pynife.utilities.HfApi", new=fake_api):
         with pytest.raises(FileNotFoundError):
             get_teacher_from_metadata("owner/nonexistent")
 
@@ -91,7 +91,7 @@ def test_get_teacher_from_metadata_missing_base_model(tmp_path) -> None:
     readme = tmp_path / "README.md"
     readme.write_text("nothing")
 
-    with patch("nife.utilities.ModelCard.load", new=lambda p: DummyModelCard(DummyData(base_model=None))):
+    with patch("pynife.utilities.ModelCard.load", new=lambda p: DummyModelCard(DummyData(base_model=None))):
         with pytest.raises(ValueError):
             get_teacher_from_metadata(tmp_path)
 
@@ -121,10 +121,10 @@ def test_load_nife_success(test_model) -> None:
         raise ValueError("unexpected model name")
 
     with (
-        patch("nife.nife.get_teacher_from_metadata", new=fake_get_teacher),
-        patch("nife.nife.SentenceTransformer", new=sentence_transformer_loader),
+        patch("pynife.nife.get_teacher_from_metadata", new=fake_get_teacher),
+        patch("pynife.nife.SentenceTransformer", new=sentence_transformer_loader),
         patch(
-            "nife.nife.Router.for_query_document",
+            "pynife.nife.Router.for_query_document",
             new=staticmethod(lambda query_modules, document_modules: DummyRouter(query_modules, document_modules)),
         ),
     ):
@@ -145,8 +145,8 @@ def test_load_nife_dimensionality_mismatch(test_model) -> None:
         return BadTeacher() if name_or_modules == "teacher-name" else test_model
 
     with (
-        patch("nife.nife.get_teacher_from_metadata", new=fake_get_teacher),
-        patch("nife.nife.SentenceTransformer", new=sentence_transformer_loader),
+        patch("pynife.nife.get_teacher_from_metadata", new=fake_get_teacher),
+        patch("pynife.nife.SentenceTransformer", new=sentence_transformer_loader),
     ):
         with pytest.raises(ValueError):
             load_as_router("small-model")

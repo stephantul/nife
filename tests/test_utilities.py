@@ -1,6 +1,6 @@
 import pytest
 
-from nife.utilities import batchify, iterable_iterator_dispatch
+from pynife.utilities import batchify, iterable_iterator_dispatch
 
 
 @pytest.mark.parametrize(

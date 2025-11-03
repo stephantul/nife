@@ -22,7 +22,7 @@ jobs:
 
     env:
       # Path to your package for coverage
-      COVERAGE_SOURCE: nife
+      COVERAGE_SOURCE: pynife
 
     steps:
       # -------- Checkout --------

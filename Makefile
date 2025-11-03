@@ -3,7 +3,7 @@ install:
 	uv run pre-commit install
 
 test:
-	uv run pytest --cov=nife --cov-report=term-missing
+	uv run pytest --cov=pynife --cov-report=term-missing
 
 install-no-pre-commit:
 	uv sync --all-extras

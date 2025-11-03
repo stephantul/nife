@@ -13,8 +13,8 @@ from datasets import Sequence as DatasetSequenceFeature
 from huggingface_hub import HfApi
 from tqdm import tqdm
 
-from nife.cards.dataset_card import generate_dataset_card
-from nife.utilities import get_teacher_from_metadata
+from pynife.cards.dataset_card import generate_dataset_card
+from pynife.utilities import get_teacher_from_metadata
 
 
 def _pair_stream(
