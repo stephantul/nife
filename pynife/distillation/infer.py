@@ -7,12 +7,13 @@ from typing import TypeVar
 
 import numpy as np
 import torch
-from pynife.data import build_parquet_shards_from_folder
-from pynife.utilities import batchify
 from sentence_transformers import SentenceTransformer
 from skeletoken import TokenizerModel
 from tqdm import tqdm
 from transformers import BatchEncoding, PreTrainedTokenizerBase, PreTrainedTokenizerFast
+
+from pynife.data import build_parquet_shards_from_folder
+from pynife.utilities import batchify
 
 logger = logging.getLogger(__name__)
 

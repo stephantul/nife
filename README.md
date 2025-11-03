@@ -2,7 +2,7 @@
 <h2 align="center">
   <img width="35%" alt="A man shooting a thing to the ground." src="https://github.com/stephantul/nife/blob/main/assets/william-blake.jpg"><br/>
 </h2>
-<h1 align="center"> NIFE </h1>
+<h1 align="center"> pyNIFE </h1>
 
 <div align="center">
   <h2>

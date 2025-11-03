@@ -11,9 +11,10 @@ import torch
 from datasets import Dataset, Features, IterableDataset, Value, load_dataset
 from datasets import Sequence as DatasetSequenceFeature
 from huggingface_hub import HfApi
+from tqdm import tqdm
+
 from pynife.cards.dataset_card import generate_dataset_card
 from pynife.utilities import get_teacher_from_metadata
-from tqdm import tqdm
 
 
 def _pair_stream(
