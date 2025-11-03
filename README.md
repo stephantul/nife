@@ -14,7 +14,7 @@ NIFE compresses large embedding models into static, drop-in replacements with up
 
 ## Introduction
 
-Nearly Inference Free Embedding (NIFE) models. NIFE models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. Because static models are so small and fast, NIFE allows you to:
+Nearly Inference Free Embedding (NIFE) models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. Because static models are so small and fast, NIFE allows you to:
 
 1. Speed up query time immensely: 200x embed time speed-up on CPU.
 2. Get away with using a much smaller memory/compute footprint. Create embeddings in your DB service.
