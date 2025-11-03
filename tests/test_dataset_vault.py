@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 from datasets import Dataset
 
-from nife.dataset_vault import (
+from pynife.dataset_vault import (
     english_words_definitions_dataset,
     fineweb_dataset,
     get_all_dataset_functions,

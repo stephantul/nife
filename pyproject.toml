@@ -75,10 +75,10 @@ warn_unused_configs = true
 ignore_missing_imports = true
 
 [tool.setuptools]
-packages = ["nife"]
+packages = ["pynife"]
 
 [tool.setuptools_scm]
 # can be empty if no extra settings are needed, presence enables setuptools_scm
 
 [tool.setuptools.dynamic]
-version = {attr = "nife.version.__version__"}
+version = {attr = "pynife.version.__version__"}

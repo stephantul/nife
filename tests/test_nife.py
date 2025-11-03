@@ -4,8 +4,8 @@ from unittest.mock import patch
 import pytest
 from sentence_transformers import SentenceTransformer
 
-from nife.nife import load_as_router
-from nife.utilities import get_teacher_from_metadata
+from pynife.nife import load_as_router
+from pynife.utilities import get_teacher_from_metadata
 
 
 class DummyModelCard:
