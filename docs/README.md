@@ -49,7 +49,7 @@ This piece of code loads the model, the dataset and then starts inference. Infer
 
 Your dataset will be ready and saved as parquet files in `output_directory`. If you want to upload these, please use the `HfAPI`, not `dataset.push_to_hub`, because we rely on some metadata embedded in the README to infer the base model later on. Note that the dataset iterator can be anything, and does not need to be a Hugging Face dataset. For example, it could also work with a stream from your database.
 
-For a simple inference script with a lot of pre-made datasets, see [the infer_datasets script](./scripts/infer_datasets.py).
+For a simple inference script with a lot of pre-made datasets, see [the infer_datasets script](../scripts/infer_datasets.py).
 
 ### 2. (optional) Expanding a tokenizer
 
@@ -81,7 +81,7 @@ This will do a couple of things:
 1) It will remove all tokens from the original tokenizer that aren't present in your data.
 2) It will then add the most frequent tokens until the size of the tokenizer == `new_vocabulary_size`.
 
-This works a lot better than training a tokenizer from scratch on equivalent data. For a runnable version, see [the expand_tokenizer script](./scripts/expand_tokenizer.py).
+This works a lot better than training a tokenizer from scratch on equivalent data. For a runnable version, see [the expand_tokenizer script](../scripts/expand_tokenizer.py).
 
 To get frequency counts, you can use `count_tokens_in_dataset`, as follows:
 
@@ -100,7 +100,7 @@ dataset.push_to_hub("my_hub")
 
 ```
 
-This dataset can be used directly to expand your tokenizer, above. For a runnable version, see [the create_vocabulary script](./scripts/create_vocabulary.py)
+This dataset can be used directly to expand your tokenizer, above. For a runnable version, see [the create_vocabulary script](../scripts/create_vocabulary.py)
 
 ### 3. Train
 
@@ -134,7 +134,7 @@ Now you can train, just like a regular sentence transformer. In my experiments, 
 * `weight_decay`: 0.01
 * `epochs`: 5
 
-It can be tempting to move to very high batch sizes, but this has a very large detrimental effect on performance, even with higher learning rates. As a consequence, GPU usage during training is actually pretty low, because there's very little actual computation happening. For a complete runnable training loop, including model initialization, see [the training script](./scripts/experiment_distillation.py).
+It can be tempting to move to very high batch sizes, but this has a very large detrimental effect on performance, even with higher learning rates. As a consequence, GPU usage during training is actually pretty low, because there's very little actual computation happening. For a complete runnable training loop, including model initialization, see [the training script](../scripts/experiment_distillation.py).
 
 ```python
 from pynife.losses import CosineLoss
