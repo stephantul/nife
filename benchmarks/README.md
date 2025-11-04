@@ -9,40 +9,40 @@ Here are the full nanoBEIR results for each teacher/NIFE pair.
 ### `NIFE-mxbai-embed-large-v1`
 
 | dataset            |   ndcg@10 teacher |   ndcg@10 NIFE |
-|:-------------------|------------:|------------:|
-| NanoArguAna        |    0.668786 |    0.640516 |
-| NanoClimateFEVER   |    0.396524 |    0.318884 |
-| NanoDBPedia        |    0.636832 |    0.612894 |
-| NanoFEVER          |    0.922807 |    0.874241 |
-| NanoFiQA2018       |    0.562228 |    0.438247 |
-| NanoHotpotQA       |    0.872424 |    0.75016  |
-| NanoMSMARCO        |    0.660706 |    0.620861 |
-| NanoNFCorpus       |    0.38455  |    0.344202 |
-| NanoNQ             |    0.707486 |    0.600752 |
-| NanoQuoraRetrieval |    0.955517 |    0.89957  |
-| NanoSCIDOCS        |    0.450356 |    0.381717 |
-| NanoSciFact        |    0.788312 |    0.738594 |
-| NanoTouche2020     |    0.531303 |    0.471938 |
+|:-------------------|------------------:|---------------:|
+| NanoArguAna        |              0.67 |           0.64 |
+| NanoClimateFEVER   |              0.40 |           0.32 |
+| NanoDBPedia        |              0.64 |           0.61 |
+| NanoFEVER          |              0.92 |           0.87 |
+| NanoFiQA2018       |              0.56 |           0.44 |
+| NanoHotpotQA       |              0.87 |           0.75 |
+| NanoMSMARCO        |              0.66 |           0.62 |
+| NanoNFCorpus       |              0.38 |           0.34 |
+| NanoNQ             |              0.71 |           0.60 |
+| NanoQuoraRetrieval |              0.96 |           0.90 |
+| NanoSCIDOCS        |              0.45 |           0.38 |
+| NanoSciFact        |              0.79 |           0.74 |
+| NanoTouche2020     |              0.53 |           0.47 |
 
 The NIFE model performs worse on most datasets, but performs closely to its teacher on DBPedia and Arguana. Note that the NIFE model was trained on MSMARCO, so this represents a case of in-domain results: if you have many documents and can train on them, your NIFE model can approach the performance of your teacher model.
 
 ### `NIFE-gte-modernbert-base`
 
 | dataset            |   ndcg@10 teacher |   ndcg@10 NIFE |
-|:-------------------|------------:|------------:|
-| NanoArguAna        |    0.770357 |    0.612167 |
-| NanoClimateFEVER   |    0.460153 |    0.376965 |
-| NanoDBPedia        |    0.599664 |    0.60707  |
-| NanoFEVER          |    0.942215 |    0.813864 |
-| NanoFiQA2018       |    0.619847 |    0.541698 |
-| NanoHotpotQA       |    0.77488  |    0.645495 |
-| NanoMSMARCO        |    0.647244 |    0.641866 |
-| NanoNFCorpus       |    0.352195 |    0.346539 |
-| NanoNQ             |    0.721093 |    0.634101 |
-| NanoQuoraRetrieval |    0.96713  |    0.897534 |
-| NanoSCIDOCS        |    0.473989 |    0.374358 |
-| NanoSciFact        |    0.820234 |    0.75267  |
-| NanoTouche2020     |    0.475784 |    0.460761 |
+|:-------------------|------------------:|---------------:|
+| NanoArguAna        |              0.77 |           0.61 |
+| NanoClimateFEVER   |              0.46 |           0.38 |
+| NanoDBPedia        |              0.60 |           0.61 |
+| NanoFEVER          |              0.94 |           0.81 |
+| NanoFiQA2018       |              0.62 |           0.54 |
+| NanoHotpotQA       |              0.77 |           0.65 |
+| NanoMSMARCO        |              0.65 |           0.64 |
+| NanoNFCorpus       |              0.35 |           0.35 |
+| NanoNQ             |              0.72 |           0.63 |
+| NanoQuoraRetrieval |              0.97 |           0.90 |
+| NanoSCIDOCS        |              0.47 |           0.37 |
+| NanoSciFact        |              0.82 |           0.75 |
+| NanoTouche2020     |              0.48 |           0.46 |
 
 As you can see the NIFE model performs worse on most datasets, but outperforms the base model on DBPedia and is pretty close on NanoMSMARCO. Note that the NIFE model was trained on MSMARCO, so this represents a case of in-domain results: if you have many documents and can train on them, your NIFE model can approach the performance of your teacher model.
 
