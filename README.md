@@ -159,14 +159,14 @@ For all models, I report NDC@10 and queries per second. I do this for the studen
 |         | Queries per second (CPU) | NDCG@10 |
 |---------|--------------------------|---------|
 | NIFE    | 71400 (14ms/1k queries)  | 59.2    |
-| Teacher | 237 (9190ms/1k queries)  | 66.34   |
+| Teacher | 237 (4210ms/1k queries)  | 66.34   |
 
 ### `mxbai-embed-large-v1`
 
 |         | Queries per second (CPU) | NDCG@10 |
 |---------|--------------------------|---------|
 | NIFE    | 65789 (15ms/1k queries)  | 59.2    |
-| Teacher | 108 (4210ms/1k queries)  | 65.6    |
+| Teacher | 108 (9190ms/1k queries)  | 65.6    |
 
 It is interesting that both NIFE models get the same performance, even with different teacher models. This could point towards a ceiling effect, where a certain percentage of queries can be answered correctly by static models, while others require contextualization.
 
