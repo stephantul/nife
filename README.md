@@ -28,9 +28,19 @@ NIFE compresses large embedding models into static, drop-in replacements with up
 
 ## Features
 
-- 200x faster CPU query embedding
+- 400-900x faster CPU query embedding
 - Fully aligned with their teacher models
 - Re-use your existing vector index
+
+## Table of contents
+
+1. [Quickstart](#quickstart)
+2. [Installation](#installation)
+3. [Usage](#usage)
+  a. [Standalone](#standalone)
+  b. [As a router](#as-a-router)
+4. [Rationale](#rationale)
+5. [Create your own model](#creating-a-nife-model)
 
 ## Introduction
 
@@ -187,7 +197,7 @@ NIFE can't do the following things:
 1) Ignore words based on context: the query "What is the capital of France?" the word "France" will cause documents containing the term "France" to be retrieved. There is no way for the model to attenuate this vector and morph it into the answer ("Paris").
 2) Deal with negation: for the same reason as above; there is no interaction between tokens, so the similarity between "Cars that aren't red" and "Cars that are red" will be really high.
 
-# Creating a NIFE model
+## Creating a NIFE model
 
 To create a NIFE model, you can run the scripts in `scripts`, or directly use the code from the repository. First, you should create a corpus of embeddings for your embedder. You can also use pre-computed collections of embeddings I created:
 
