@@ -197,7 +197,7 @@ NIFE can't do the following things:
 
 ## Inquiries
 
-If you think NIFE could be interesting for your business let me know, I am open to consulting jobs regarding training models and fast inference. Just reach out to me [via e-mail](stephantul@gmail.com).
+If you think NIFE could be interesting for your business let me know, I am open to consulting jobs regarding training models and fast inference. Just reach out to me [via e-mail](mailto:stephantul@gmail.com).
 
 ## License
 
