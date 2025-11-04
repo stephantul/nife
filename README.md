@@ -25,7 +25,7 @@
     <a href="./docs/README.md"><strong>Create your own model</strong></a>
 </div>
 
-NIFE compresses large embedding models into static, drop-in replacements with up to 200x faster query embedding [see benchmarks](#benchmarks).
+NIFE compresses large embedding models into static, drop-in replacements with up to 1000x faster query embedding [see benchmarks](#benchmarks).
 
 ## Features
 
