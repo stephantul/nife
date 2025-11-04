@@ -16,7 +16,15 @@
     </a>
 </div>
 
-NIFE compresses large embedding models into static, drop-in replacements with up to 200x faster query embedding [see benchmarks]().
+
+<div align="center">
+  <h2>
+    <a href="https://huggingface.co/collections/stephantulkens/nife-models"><strong>Models</strong></a> |
+    <a href="https://huggingface.co/collections/stephantulkens/nife-data"><strong>Datasets</strong></a> |
+    <a href="./benchmarks/"><strong>Benchmarks</strong></a> |
+</div>
+
+NIFE compresses large embedding models into static, drop-in replacements with up to 200x faster query embedding [see benchmarks](#benchmarks).
 
 ## Features
 
@@ -113,6 +121,13 @@ print(model.similarity(query, docs))
 
 ```
 
+## Pretrained models
+
+I have two pretrained models:
+
+* [`stephantulkens/NIFE-mxbai-embed-large-v1`](https://huggingface.co/stephantulkens/NIFE-mxbai-embed-large-v1): aligned with [`mxbai-embed-large-v1`](https://huggingface.co/mixedbread-ai/mxbai-embed-large-v1).
+* [`stephantulkens/NIFE-gte-modernbert-base`](https://huggingface.co/stephantulkens/NIFE-gte-modernbert-base): aligned with [`gte-modernbert-base`](https://huggingface.co/Alibaba-NLP/gte-modernbert-base).
+
 ## Rationale
 
 For retrieval using dense models, the normal mode of operation is to embed your documents, and put them in some index. Then, using that same model, also embed your queries. In general, larger embedding models are better than smaller models, so you're often better off by making your embedder as large as possible. This however, makes inference more difficult; you need to host a larger model, and embedding queries might take longer.
@@ -129,6 +144,31 @@ See this table:
 | Inference free | doc-SPLADE | NIFE                 |
 
 As in doc-SPLADE, you lose performance. No real way about it, but as with other fast models, the gap is smaller than you might think.
+
+## Benchmarks
+
+I benchmark our models on [NanoBEIR](https://huggingface.co/collections/zeta-alpha-ai/nanobeir). I use two trained models:
+
+* [`stephantulkens/NIFE-mxbai-embed-large-v1`](https://huggingface.co/stephantulkens/NIFE-mxbai-embed-large-v1)
+* [`stephantulkens/NIFE-gte-modernbert-base`](https://huggingface.co/stephantulkens/NIFE-gte-modernbert-base)
+
+For all models, I report NDC@10 and queries per second. I do this for the student model and teacher model, to show how much performance you lose when switching between them. Detailed benchmark performance can be found in [the benchmarks folder.](./benchmarks/). The query timings were performed on the first 1000 queries of the msmarco dataset, and averaged over 7 runs. The benchmarks were run on an Apple M3 pro.
+
+### `gte-modernbert-base`
+
+|         | Queries per second (CPU) | NDCG@10 |
+|---------|--------------------------|---------|
+| NIFE    | 71400 (14ms/1k queries)  | 59.2    |
+| Teacher | 237 (9190ms/1k queries)  | 66.34   |
+
+### `mxbai-embed-large-v1`
+
+|         | Queries per second (CPU) | NDCG@10 |
+|---------|--------------------------|---------|
+| NIFE    | 65789 (15ms/1k queries)  | 59.2    |
+| Teacher | 108 (4210ms/1k queries)  | 65.6    |
+
+It is interesting that both NIFE models get the same performance, even with different teacher models. This could point towards a ceiling effect, where a certain percentage of queries can be answered correctly by static models, while others require contextualization.
 
 ## How does it work?
 
