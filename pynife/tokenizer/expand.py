@@ -104,4 +104,5 @@ def expand_tokenizer(
     if min_subword_frequency > 0:
         tokenizer_model = _prune_tokenizer(tokenizer_model, dataset, min_subword_frequency)
     new_tokenizer = _add_tokens_to_tokenizer(tokenizer_model, dataset, filter_numbers, new_vocab_size)
+    new_tokenizer.post_processor = None
     return new_tokenizer.to_transformers()
