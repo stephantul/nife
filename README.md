@@ -25,7 +25,7 @@
     <a href="./docs/README.md"><strong>Create your own model</strong></a>
 </div>
 
-NIFE compresses large embedding models into static, drop-in replacements with up to 1000x faster query embedding ([see benchmarks](#benchmarks)).
+NIFE compresses large embedding models into static, drop-in replacements with up to 900x faster query embedding ([see benchmarks](#benchmarks)).
 
 ## Features
 
@@ -44,7 +44,7 @@ NIFE compresses large embedding models into static, drop-in replacements with up
 
 Nearly Inference Free Embedding (NIFE) models are [static embedding](https://huggingface.co/blog/static-embeddings) models that are fully aligned with a much larger model. Because static models are so small and fast, NIFE allows you to:
 
-1. Speed up query time immensely: 200x embed time speed-up on CPU.
+1. Speed up query time immensely: 900x embed time speed-up on CPU.
 2. Get away with using a much smaller memory/compute footprint. Create embeddings in your DB service.
 3. Reuse your big model index: Switch dynamically between your big model and the NIFE model.
 
